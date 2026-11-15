@@ -28,7 +28,14 @@ function createDb() {
   sqlite.pragma("busy_timeout = 5000");
 
   const db = drizzle(sqlite, { schema });
-  migrate(db, { migrationsFolder: path.join(process.cwd(), "drizzle") });
+  try {
+    migrate(db, { migrationsFolder: path.join(process.cwd(), "drizzle") });
+  } catch (err: any) {
+    // Prevent concurrent Next.js worker race condition on build
+    if (!err?.message?.includes("already exists")) {
+      console.warn("[DB Migration Notice]", err?.message);
+    }
+  }
   return { sqlite, db };
 }
 
