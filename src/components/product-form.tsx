@@ -26,6 +26,7 @@ export function ProductForm({ initial }: { initial: ProductFormValues | null }) 
     undefined,
   );
   const [preview, setPreview] = useState<string | null>(initial?.logoUrl ?? null);
+  const [fileError, setFileError] = useState<string | null>(null);
 
   return (
     <form action={formAction} className="space-y-5">
@@ -130,11 +131,21 @@ export function ProductForm({ initial }: { initial: ProductFormValues | null }) 
             accept="image/png,image/jpeg,image/webp"
             onChange={(event) => {
               const file = event.target.files?.[0];
+              if (file && file.size > 512 * 1024) {
+                setFileError(
+                  `Selected image is ${(file.size / 1024).toFixed(0)} KB. Logo must be 512 KB or smaller.`
+                );
+              } else {
+                setFileError(null);
+              }
               setPreview(file ? URL.createObjectURL(file) : (initial?.logoUrl ?? null));
             }}
             className="max-w-[190px] text-xs text-zinc-500 file:mr-3 file:rounded-lg file:border-0 file:bg-white file:px-3 file:py-1.5 file:text-xs file:font-medium file:text-zinc-700 file:ring-1 file:ring-zinc-300"
           />
         </div>
+        {fileError ? (
+          <p className="mt-2 text-xs font-medium text-red-600">{fileError}</p>
+        ) : null}
         {initial?.logoUrl ? (
           <label className="mt-3 flex items-center gap-2 text-xs text-zinc-600">
             <input type="checkbox" name="removeLogo" className="size-3.5 rounded border-zinc-300" />
@@ -182,7 +193,7 @@ export function ProductForm({ initial }: { initial: ProductFormValues | null }) 
 
       <button
         type="submit"
-        disabled={pending}
+        disabled={pending || Boolean(fileError)}
         className="rounded-lg bg-zinc-900 px-4 py-2.5 text-sm font-medium text-white transition hover:bg-zinc-800 disabled:opacity-60"
       >
         {pending ? "Saving…" : initial ? "Save product" : "Create product"}
