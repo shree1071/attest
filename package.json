@@ -1,7 +1,7 @@
 {
-  "name": "testimonial-exchange",
+  "name": "attest",
   "version": "0.1.0",
-  "description": "",
+  "description": "Minimalistic B2B Testimonial Exchange & Wall of Love Platform",
   "main": "index.js",
   "scripts": {
     "test": "node --import tsx --test src/lib/core.test.ts",
