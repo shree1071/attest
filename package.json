@@ -2,6 +2,9 @@
   "name": "attest",
   "version": "0.1.0",
   "description": "Minimalistic B2B Testimonial Exchange & Wall of Love Platform",
+  "engines": {
+    "node": "22.x"
+  },
   "main": "index.js",
   "scripts": {
     "test": "node --import tsx --test src/lib/core.test.ts",

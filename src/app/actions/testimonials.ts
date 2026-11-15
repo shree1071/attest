@@ -13,6 +13,7 @@ import {
   products,
   testimonialRequests,
   testimonials,
+  users,
 } from "@/lib/schema";
 import { checkbox, text } from "@/lib/validate";
 import type { FormState } from "@/lib/action-state";
@@ -34,10 +35,17 @@ async function submitTestimonial(
     if (!checkbox(formData.get("consent"))) {
       throw new ValidationError("Please confirm you allow this testimonial to be published.");
     }
+    const rawRating = Number(formData.get("rating") || 5);
+    const rating = Math.min(5, Math.max(1, isNaN(rawRating) ? 5 : Math.round(rawRating)));
 
     const snapshot = buildIdentitySnapshot(user);
 
     db.transaction((tx) => {
+      const dbUser = tx.select().from(users).where(eq(users.id, user.id)).get();
+      if (dbUser?.isRestricted) {
+        throw new ValidationError("Your account is restricted from submitting testimonials.");
+      }
+
       const product = tx.select().from(products).where(eq(products.slug, slug)).get();
       if (!product || !product.isPublic) {
         throw new ValidationError("This product page is not available.");
@@ -65,6 +73,7 @@ async function submitTestimonial(
           productId: product.id,
           authorId: user.id,
           content,
+          rating,
           sourceType,
           status: "pending",
           identitySnapshot: JSON.stringify(snapshot),

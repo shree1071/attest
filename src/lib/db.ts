@@ -12,7 +12,9 @@ const globalForDb = globalThis as unknown as {
 };
 
 function createDb() {
-  const dataDir = path.join(process.cwd(), ".data");
+  const dataDir = process.env.VERCEL
+    ? path.join("/tmp", ".data")
+    : path.join(process.cwd(), ".data");
   fs.mkdirSync(path.join(dataDir, "uploads", "logos"), { recursive: true });
 
   const databasePath = process.env.DATABASE_PATH

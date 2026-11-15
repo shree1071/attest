@@ -33,6 +33,8 @@ export const users = sqliteTable(
     profileUrl: text("profile_url"),
     avatarUrl: text("avatar_url"),
     identityObservedAt: integer("identity_observed_at", { mode: "timestamp_ms" }),
+    isAdmin: integer("is_admin", { mode: "boolean" }).notNull().default(false),
+    isRestricted: integer("is_restricted", { mode: "boolean" }).notNull().default(false),
     createdAt: now(),
   },
   (t) => [
@@ -91,6 +93,7 @@ export const testimonials = sqliteTable(
       .notNull()
       .references(() => users.id, { onDelete: "cascade" }),
     content: text("content").notNull(),
+    rating: integer("rating").notNull().default(5),
     sourceType: text("source_type", { enum: ["customer", "exchange"] }).notNull(),
     status: text("status", { enum: ["pending", "approved", "rejected", "withdrawn"] })
       .notNull()
@@ -158,8 +161,29 @@ export const testimonialRequests = sqliteTable(
   ],
 );
 
+export const auditEvents = sqliteTable(
+  "audit_events",
+  {
+    id: identifier(),
+    actorId: text("actor_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    action: text("action").notNull(),
+    targetType: text("target_type").notNull(),
+    targetId: text("target_id").notNull(),
+    reason: text("reason"),
+    metadata: text("metadata"),
+    createdAt: now(),
+  },
+  (t) => [
+    index("audit_actor_idx").on(t.actorId),
+    index("audit_target_idx").on(t.targetType, t.targetId),
+  ],
+);
+
 export type User = typeof users.$inferSelect;
 export type Product = typeof products.$inferSelect;
 export type Testimonial = typeof testimonials.$inferSelect;
 export type CreditTransaction = typeof creditTransactions.$inferSelect;
 export type TestimonialRequest = typeof testimonialRequests.$inferSelect;
+export type AuditEvent = typeof auditEvents.$inferSelect;

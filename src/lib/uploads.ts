@@ -4,7 +4,9 @@ import path from "node:path";
 import { ValidationError } from "./errors";
 
 const MAX_BYTES = 512 * 1024;
-const LOGO_DIR = path.join(process.cwd(), ".data", "uploads", "logos");
+const LOGO_DIR = process.env.VERCEL
+  ? path.join("/tmp", ".data", "uploads", "logos")
+  : path.join(process.cwd(), ".data", "uploads", "logos");
 
 export const LOGO_TYPES = {
   png: "image/png",
