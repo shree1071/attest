@@ -1,5 +1,6 @@
 # Attest — B2B Testimonial Exchange Platform
 
+[![CI](https://github.com/shree1071/attest/actions/workflows/ci.yml/badge.svg)](https://github.com/shree1071/attest/actions/workflows/ci.yml)
 [![Next.js](https://img.shields.io/badge/Next.js-16.4-black?style=flat&logo=next.js)](https://nextjs.org)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.9-blue?style=flat&logo=typescript)](https://www.typescriptlang.org)
 [![Tailwind CSS](https://img.shields.io/badge/Tailwind-v4-38bdf8?style=flat&logo=tailwindcss)](https://tailwindcss.com)
