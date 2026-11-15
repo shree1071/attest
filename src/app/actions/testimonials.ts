@@ -9,6 +9,8 @@ import { awardReviewCredits } from "@/lib/credits";
 import { db, type Db } from "@/lib/db";
 import { ValidationError } from "@/lib/errors";
 import { buildIdentitySnapshot } from "@/lib/identity";
+import { notifyOwnerNewSubmission, notifyReviewerApproved } from "@/lib/email";
+import { verifyTurnstileToken } from "@/lib/turnstile";
 import {
   products,
   testimonialRequests,
@@ -34,6 +36,12 @@ async function submitTestimonial(
     });
     if (!checkbox(formData.get("consent"))) {
       throw new ValidationError("Please confirm you allow this testimonial to be published.");
+    }
+
+    const turnstileToken = formData.get("cf-turnstile-response") as string | null;
+    const isValidToken = await verifyTurnstileToken(turnstileToken);
+    if (!isValidToken) {
+      throw new ValidationError("Anti-bot verification failed. Please try again.");
     }
     const rawRating = Number(formData.get("rating") || 5);
     const rating = Math.min(5, Math.max(1, isNaN(rawRating) ? 5 : Math.round(rawRating)));

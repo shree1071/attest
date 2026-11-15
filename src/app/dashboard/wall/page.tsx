@@ -3,6 +3,7 @@ import { moderateTestimonial, reorderTestimonial } from "@/app/actions/testimoni
 import { CopyField } from "@/components/copy-field";
 import { SubmitButton } from "@/components/submit-button";
 import { TestimonialCard } from "@/components/testimonial-card";
+import { WallCustomizer } from "@/components/wall-customizer";
 import { requireUser } from "@/lib/auth";
 import { parseSnapshot } from "@/lib/identity";
 import { getOwnedProduct, listWall } from "@/lib/queries";
@@ -38,37 +39,12 @@ export default async function DashboardWallPage() {
     <div className="grid gap-6 lg:grid-cols-[0.75fr_1.25fr] lg:items-start">
       <aside className="space-y-4">
         <section className="rounded-2xl border border-zinc-200 bg-white p-5">
-          <h2 className="text-sm font-semibold text-zinc-900">Share your wall</h2>
+          <h2 className="text-sm font-semibold text-zinc-900">Customizable Widgets</h2>
           <p className="mt-0.5 text-xs text-zinc-500">
-            Only approved testimonials are exposed. Pending and rejected entries never render.
+            Configure layout and theme. Only approved testimonials render on the public wall.
           </p>
-          <div className="mt-4 space-y-3">
-            <CopyField label="Public wall URL" value={wallUrl} />
-            <CopyField
-              label="Iframe embed"
-              value={embedSnippet(embedUrl, product.name)}
-              multiline
-            />
-          </div>
-          <div className="mt-4 flex flex-wrap gap-2">
-            <Link
-              href={`/wall/${product.slug}`}
-              className="rounded-lg border border-zinc-300 px-3 py-1.5 text-xs font-medium text-zinc-700 transition hover:border-zinc-400"
-            >
-              Open wall
-            </Link>
-            <Link
-              href={`/wall/${product.slug}?embed=1`}
-              className="rounded-lg border border-zinc-300 px-3 py-1.5 text-xs font-medium text-zinc-700 transition hover:border-zinc-400"
-            >
-              Preview embed
-            </Link>
-            <Link
-              href={`/product/${product.slug}`}
-              className="rounded-lg bg-zinc-900 px-3 py-1.5 text-xs font-medium text-white transition hover:bg-zinc-800"
-            >
-              Product page
-            </Link>
+          <div className="mt-4">
+            <WallCustomizer slug={product.slug} name={product.name} baseUrl={base} />
           </div>
         </section>
 
@@ -113,6 +89,7 @@ export default async function DashboardWallPage() {
                   sourceType={item.sourceType}
                   submittedAt={item.submittedAt}
                   status={item.status}
+                  rating={item.rating ?? 5}
                   footer={
                     <div className="flex items-center justify-between gap-2">
                       <span className="text-[11px] text-zinc-400">Position {index + 1}</span>

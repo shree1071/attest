@@ -21,6 +21,7 @@ export async function GET(
     return {
       id: t.id,
       content: t.content,
+      rating: t.rating ?? 5,
       author: {
         name: snapshot.display_name,
         headline: snapshot.headline,

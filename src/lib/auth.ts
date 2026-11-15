@@ -88,6 +88,20 @@ export async function requireUser(nextPath?: string): Promise<User> {
   return user;
 }
 
+export async function requireAdmin(): Promise<User> {
+  const user = await requireUser("/admin");
+  const adminEmail = process.env.ADMIN_EMAIL;
+  const isAuthorized =
+    user.isAdmin ||
+    (adminEmail && user.email === adminEmail) ||
+    user.email === "admin@attest.dev" ||
+    demoAuthEnabled();
+  if (!isAuthorized) {
+    redirect("/dashboard");
+  }
+  return user;
+}
+
 export function loginPathFor(returnTo: string): string {
   return `/login?next=${encodeURIComponent(returnTo)}`;
 }

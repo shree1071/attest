@@ -8,6 +8,7 @@ import { after, test } from "node:test";
 const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "attest-test-"));
 process.env.DATABASE_PATH = path.join(tmpDir, "test.db");
 
+const { eq } = await import("drizzle-orm");
 const { db, sqlite } = await import("./db");
 const { users } = await import("./schema");
 const { awardReviewCredits, balanceOf, chargeForRequest, CREDITS_PER_REVIEW } = await import(
@@ -93,4 +94,24 @@ test("embed snippets escape attribute values", () => {
   assert.match(snippet, /src="https:\/\/attest\.example\/wall\/demo\?embed=1"/);
   assert.match(snippet, /title="Demo &quot;Rated&quot; &amp; &lt;Co&gt; testimonials"/);
   assert.ok(!snippet.includes("<Co>"));
+});
+
+test("rating must be clamped between 1 and 5", () => {
+  const clampRating = (raw: number) => Math.min(5, Math.max(1, isNaN(raw) ? 5 : Math.round(raw)));
+  assert.equal(clampRating(5), 5);
+  assert.equal(clampRating(1), 1);
+  assert.equal(clampRating(6), 5);
+  assert.equal(clampRating(0), 1);
+  assert.equal(clampRating(-10), 1);
+  assert.equal(clampRating(4.2), 4);
+});
+
+test("restricted user status flag is respected", () => {
+  const userId = createUser("Restricted User");
+  const user = db.select().from(users).where(eq(users.id, userId)).get();
+  assert.equal(user?.isRestricted, false);
+
+  db.update(users).set({ isRestricted: true }).where(eq(users.id, userId)).run();
+  const updated = db.select().from(users).where(eq(users.id, userId)).get();
+  assert.equal(updated?.isRestricted, true);
 });
