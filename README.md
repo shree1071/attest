@@ -45,44 +45,52 @@
 
 ## System Architecture & Data Flow
 
+```mermaid
+flowchart LR
+    subgraph Actors["Actors"]
+        Owner["Owner / Reviewer\n(browser)"]
+        Admin["Admin\n(moderation queue)"]
+        Visitor["Visitor\n(client site)"]
+        Uptime["Uptime Monitor\n(external)"]
+    end
+
+    subgraph Cloudflare["Cloudflare Account (Client-Owned)"]
+        WebApp["Web App: Next.js on Workers\n(pages, forms, auth, admin, API)"]
+        Hyperdrive["Hyperdrive\n(connection pooling)"]
+        Turnstile["Turnstile\n(spam check)"]
+        Widget["Widget: static script + cached API\n(~60s edge cache)"]
+        Backup["Daily Backup Job\n(export)"]
+    end
+
+    subgraph External["External Services & Storage"]
+        LinkedIn["LinkedIn OAuth\n(OIDC)"]
+        Neon["Neon Postgres\n(users, sites, reviews, widgets)"]
+        BackupStorage["Backup Storage\n(encrypted)"]
+    end
+
+    Owner -- "sign in, submit, review" --> WebApp
+    Admin -- "role-checked /admin" --> WebApp
+    Visitor -- "script + cached data" --> Widget
+    Uptime -- "health check" --> WebApp
+
+    WebApp -- "OAuth sign-in" --> LinkedIn
+    WebApp -- "verify token" --> Turnstile
+    WebApp -- "read / write" --> Hyperdrive
+    Hyperdrive --> Neon
+
+    Widget -. "cache miss only" .-> Neon
+    Neon -- "daily export" --> Backup
+    Backup -- "encrypted push" --> BackupStorage
 ```
-                      ┌──────────────────────────────────────┐
-                      │        Product Management            │
-                      │  Create Profile · Slugs · Logo Asset │
-                      └──────────────────┬───────────────────┘
-                                         │
-                 ┌───────────────────────┴───────────────────────┐
-                 ▼                                               ▼
-     ┌───────────────────────┐                       ┌───────────────────────┐
-     │  Method 1: Direct     │                       │  Method 2: Marketplace │
-     │  Customer Collection  │                       │  Community Exchange   │
-     │  (/collect/[slug])    │                       │  (/product/[slug])    │
-     │  • Free forever       │                       │  • Reviewer gets +5 cr│
-     │  • No credit cost     │                       │  • Owner spends 1 cr  │
-     └───────────┬───────────┘                       └───────────┬───────────┘
-                 │                                               │
-                 └───────────────────────┬───────────────────────┘
-                                         ▼
-                      ┌──────────────────────────────────────┐
-                      │    Identity Snapshot Generation      │
-                      │  Capture Name, Avatar, Headline, &   │
-                      │  Provider Provenance into JSON Record│
-                      └──────────────────┬───────────────────┘
-                                         ▼
-                      ┌──────────────────────────────────────┐
-                      │       Owner Moderation Inbox         │
-                      │   /dashboard/inbox (Pending Reviews) │
-                      └───────┬──────────────────────┬───────┘
-                              │                      │
-                     [Approve]│                      │[Reject]
-                              ▼                      ▼
-                 ┌────────────────────────┐    ┌────────────────────────┐
-                 │  Public Wall & Embed   │    │  Private Rejection     │
-                 │  (/wall/[slug])        │    │  • Hidden from public  │
-                 │  • Iframe & Direct Link│    │  • Credit kept (unless │
-                 │  • Sanitize & CSP Safe │    │    flagged for abuse)  │
-                 └────────────────────────┘    └────────────────────────┘
-```
+
+### High-Level Component Mapping
+
+1. **Next.js on Cloudflare Workers**: Edge runtime hosting for SSR pages, Server Actions, OAuth callbacks, and API routes.
+2. **Cloudflare Hyperdrive & Neon Postgres**: Scalable serverless PostgreSQL with global connection pooling and zero cold-start bottlenecks.
+3. **Cloudflare Turnstile**: Zero-friction bot protection on review submissions and authentication forms.
+4. **Edge-Cached Widget & Script (`~60s cache`)**: Ultra-fast `<script src="/widget.js">` and `/api/v1/widget/[slug]` endpoint ensuring client websites load social proof in <50ms without hitting the primary database.
+5. **Uptime Monitoring & Health Probe**: Live `/api/health` checking node availability and database connectivity.
+6. **Automated Daily Backups**: Scheduled encrypted database exports to off-site cloud storage.
 
 ---
 
