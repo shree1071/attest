@@ -1,21 +1,24 @@
 import { sql } from "drizzle-orm";
 import {
+  boolean,
   check,
   index,
   integer,
-  sqliteTable,
+  pgTable,
   text,
+  timestamp,
   uniqueIndex,
-} from "drizzle-orm/sqlite-core";
+} from "drizzle-orm/pg-core";
 
-const now = () => integer("created_at", { mode: "timestamp_ms" }).notNull().$defaultFn(() => new Date());
+const now = () =>
+  timestamp("created_at", { withTimezone: true }).notNull().defaultNow();
 
 const identifier = () =>
   text("id")
     .primaryKey()
     .$defaultFn(() => crypto.randomUUID());
 
-export const users = sqliteTable(
+export const users = pgTable(
   "users",
   {
     id: identifier(),
@@ -32,9 +35,9 @@ export const users = sqliteTable(
     providerSubject: text("provider_subject"),
     profileUrl: text("profile_url"),
     avatarUrl: text("avatar_url"),
-    identityObservedAt: integer("identity_observed_at", { mode: "timestamp_ms" }),
-    isAdmin: integer("is_admin", { mode: "boolean" }).notNull().default(false),
-    isRestricted: integer("is_restricted", { mode: "boolean" }).notNull().default(false),
+    identityObservedAt: timestamp("identity_observed_at", { withTimezone: true }),
+    isAdmin: boolean("is_admin").notNull().default(false),
+    isRestricted: boolean("is_restricted").notNull().default(false),
     createdAt: now(),
   },
   (t) => [
@@ -43,20 +46,20 @@ export const users = sqliteTable(
   ],
 );
 
-export const sessions = sqliteTable(
+export const sessions = pgTable(
   "sessions",
   {
     id: text("id").primaryKey(),
     userId: text("user_id")
       .notNull()
       .references(() => users.id, { onDelete: "cascade" }),
-    expiresAt: integer("expires_at", { mode: "timestamp_ms" }).notNull(),
+    expiresAt: timestamp("expires_at", { withTimezone: true }).notNull(),
     createdAt: now(),
   },
   (t) => [index("sessions_user_idx").on(t.userId)],
 );
 
-export const products = sqliteTable(
+export const products = pgTable(
   "products",
   {
     id: identifier(),
@@ -69,10 +72,8 @@ export const products = sqliteTable(
     category: text("category").notNull().default("SaaS"),
     logoKey: text("logo_key"),
     slug: text("slug").notNull(),
-    isPublic: integer("is_public", { mode: "boolean" }).notNull().default(true),
-    acceptingTestimonials: integer("accepting_testimonials", { mode: "boolean" })
-      .notNull()
-      .default(true),
+    isPublic: boolean("is_public").notNull().default(true),
+    acceptingTestimonials: boolean("accepting_testimonials").notNull().default(true),
     createdAt: now(),
   },
   (t) => [
@@ -82,7 +83,7 @@ export const products = sqliteTable(
   ],
 );
 
-export const testimonials = sqliteTable(
+export const testimonials = pgTable(
   "testimonials",
   {
     id: identifier(),
@@ -99,13 +100,13 @@ export const testimonials = sqliteTable(
       .notNull()
       .default("pending"),
     identitySnapshot: text("identity_snapshot").notNull(),
-    consentAt: integer("consent_at", { mode: "timestamp_ms" }).notNull(),
-    submittedAt: integer("submitted_at", { mode: "timestamp_ms" })
+    consentAt: timestamp("consent_at", { withTimezone: true }).notNull(),
+    submittedAt: timestamp("submitted_at", { withTimezone: true })
       .notNull()
-      .$defaultFn(() => new Date()),
-    approvedAt: integer("approved_at", { mode: "timestamp_ms" }),
-    rejectedAt: integer("rejected_at", { mode: "timestamp_ms" }),
-    withdrawnAt: integer("withdrawn_at", { mode: "timestamp_ms" }),
+      .defaultNow(),
+    approvedAt: timestamp("approved_at", { withTimezone: true }),
+    rejectedAt: timestamp("rejected_at", { withTimezone: true }),
+    withdrawnAt: timestamp("withdrawn_at", { withTimezone: true }),
     displayOrder: integer("display_order").notNull().default(0),
     createdAt: now(),
   },
@@ -116,7 +117,7 @@ export const testimonials = sqliteTable(
   ],
 );
 
-export const creditTransactions = sqliteTable(
+export const creditTransactions = pgTable(
   "credit_transactions",
   {
     id: identifier(),
@@ -142,7 +143,7 @@ export const creditTransactions = sqliteTable(
   ],
 );
 
-export const testimonialRequests = sqliteTable(
+export const testimonialRequests = pgTable(
   "testimonial_requests",
   {
     id: identifier(),
@@ -161,7 +162,7 @@ export const testimonialRequests = sqliteTable(
   ],
 );
 
-export const auditEvents = sqliteTable(
+export const auditEvents = pgTable(
   "audit_events",
   {
     id: identifier(),

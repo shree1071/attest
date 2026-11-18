@@ -17,8 +17,8 @@ export const dynamic = "force-dynamic";
 
 export default async function DashboardOverviewPage() {
   const user = await requireUser("/dashboard");
-  const product = getOwnedProduct(user.id);
-  const balance = balanceOf(user.id);
+  const product = await getOwnedProduct(user.id);
+  const balance = await balanceOf(user.id);
 
   if (!product) {
     return (
@@ -55,9 +55,9 @@ export default async function DashboardOverviewPage() {
     );
   }
 
-  const counts = countByStatus(product.id);
-  const requests = openRequests(product.id);
-  const pending = listByStatus(product.id, "pending").slice(0, 3);
+  const counts = await countByStatus(product.id);
+  const requests = await openRequests(product.id);
+  const pending = (await listByStatus(product.id, "pending")).slice(0, 3);
   const logo = logoUrl(product.logoKey);
   const base = await baseUrl();
 

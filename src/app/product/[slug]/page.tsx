@@ -25,7 +25,7 @@ export async function generateMetadata({
   params: Promise<{ slug: string }>;
 }): Promise<Metadata> {
   const { slug } = await params;
-  const product = getProductBySlug(slug);
+  const product = await getProductBySlug(slug);
   if (!product || !product.isPublic) return { title: "Product not available — Attest" };
   return {
     title: `${product.name} — Attest`,
@@ -43,15 +43,15 @@ export default async function ProductPage({
   const { slug } = await params;
   const query = await searchParams;
   const viewer = await getCurrentUser();
-  const product = getProductBySlug(slug);
+  const product = await getProductBySlug(slug);
   if (!product) notFound();
   if (!product.isPublic && viewer?.id !== product.ownerId) notFound();
 
-  const owner = ownerName(product.ownerId);
+  const owner = await ownerName(product.ownerId);
   const isOwn = viewer?.id === product.ownerId;
-  const submission = viewer ? submissionFor(product.id, viewer.id) : undefined;
-  const approved = listWall(product.id);
-  const requests = openRequests(product.id);
+  const submission = viewer ? await submissionFor(product.id, viewer.id) : undefined;
+  const approved = await listWall(product.id);
+  const requests = await openRequests(product.id);
   const logo = logoUrl(product.logoKey);
   const justSubmitted = query.submitted === "1";
 

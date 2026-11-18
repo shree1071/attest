@@ -1,60 +1,91 @@
 import assert from "node:assert/strict";
 import crypto from "node:crypto";
-import fs from "node:fs";
-import os from "node:os";
-import path from "node:path";
 import { after, test } from "node:test";
 
-const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "attest-test-"));
-process.env.DATABASE_PATH = path.join(tmpDir, "test.db");
+// Database-backed tests run only when an explicit test database is provided.
+// Create its schema first with:
+//   TEST_DATABASE_URL=... npx drizzle-kit push --url "$TEST_DATABASE_URL"
+const databaseUrl = process.env.TEST_DATABASE_URL;
+const dbTest = databaseUrl ? test : test.skip;
 
-const { eq } = await import("drizzle-orm");
-const { db, sqlite } = await import("./db");
-const { users } = await import("./schema");
-const { awardReviewCredits, balanceOf, chargeForRequest, CREDITS_PER_REVIEW } = await import(
-  "./credits"
-);
+type DbModule = typeof import("./db");
+type SchemaModule = typeof import("./schema");
+type CreditsModule = typeof import("./credits");
+
+let dbModule: DbModule | undefined;
+let schema: SchemaModule | undefined;
+let credits: CreditsModule | undefined;
+
+if (databaseUrl) {
+  process.env.DATABASE_URL = databaseUrl;
+  dbModule = await import("./db");
+  schema = await import("./schema");
+  credits = await import("./credits");
+}
+
+const createdUserIds: string[] = [];
+
+after(async () => {
+  if (!dbModule || !schema) return;
+  if (createdUserIds.length > 0) {
+    const { inArray } = await import("drizzle-orm");
+    await dbModule.db.delete(schema.users).where(inArray(schema.users.id, createdUserIds));
+  }
+  await dbModule.pool.end();
+});
+
+async function createUser(name: string): Promise<string> {
+  if (!dbModule || !schema) throw new Error("TEST_DATABASE_URL is required");
+  const id = crypto.randomUUID();
+  await dbModule.db
+    .insert(schema.users)
+    .values({ id, name, identitySource: "demo", headlineSource: "self_reported" });
+  createdUserIds.push(id);
+  return id;
+}
+
 const { email, httpUrl, slugify, text } = await import("./validate");
 const { safeNextPath } = await import("./auth");
 const { embedSnippet } = await import("./urls");
 
-after(() => {
-  sqlite.close();
-  fs.rmSync(tmpDir, { recursive: true, force: true });
-});
+dbTest("credit balance comes from the ledger and can never go negative", async () => {
+  if (!dbModule || !credits) throw new Error("TEST_DATABASE_URL is required");
+  const userId = await createUser("Ledger Tester");
+  assert.equal(await credits.balanceOf(userId), 0);
 
-function createUser(name: string): string {
-  const id = crypto.randomUUID();
-  db.insert(users).values({ id, name, identitySource: "demo", headlineSource: "self_reported" }).run();
-  return id;
-}
+  await credits.awardReviewCredits(dbModule.db, userId, `testimonial-${userId}`);
+  assert.equal(await credits.balanceOf(userId), credits.CREDITS_PER_REVIEW);
 
-test("credit balance comes from the ledger and can never go negative", () => {
-  const userId = createUser("Ledger Tester");
-  assert.equal(balanceOf(userId), 0);
+  await assert.rejects(
+    credits.awardReviewCredits(dbModule.db, userId, `testimonial-${userId}`),
+  );
+  assert.equal(
+    await credits.balanceOf(userId),
+    credits.CREDITS_PER_REVIEW,
+    "duplicate award must not change balance",
+  );
 
-  awardReviewCredits(db, userId, `testimonial-${userId}`);
-  assert.equal(balanceOf(userId), CREDITS_PER_REVIEW);
-
-  assert.throws(() => awardReviewCredits(db, userId, `testimonial-${userId}`));
-  assert.equal(balanceOf(userId), CREDITS_PER_REVIEW, "duplicate award must not change balance");
-
-  for (let index = 0; index < CREDITS_PER_REVIEW; index += 1) {
-    chargeForRequest(db, userId, `request-${index}-${userId}`);
+  for (let index = 0; index < credits.CREDITS_PER_REVIEW; index += 1) {
+    await credits.chargeForRequest(dbModule.db, userId, `request-${index}-${userId}`);
   }
-  assert.equal(balanceOf(userId), 0);
+  assert.equal(await credits.balanceOf(userId), 0);
 
-  assert.throws(() => chargeForRequest(db, userId, `request-overdraft-${userId}`));
-  assert.equal(balanceOf(userId), 0, "failed spend must not change balance");
+  await assert.rejects(
+    credits.chargeForRequest(dbModule.db, userId, `request-overdraft-${userId}`),
+  );
+  assert.equal(await credits.balanceOf(userId), 0, "failed spend must not change balance");
 });
 
-test("a request reference can only be charged once", () => {
-  const userId = createUser("Idempotency Tester");
-  awardReviewCredits(db, userId, `testimonial-${userId}`);
-  chargeForRequest(db, userId, `request-${userId}`);
+dbTest("a request reference can only be charged once", async () => {
+  if (!dbModule || !credits) throw new Error("TEST_DATABASE_URL is required");
+  const userId = await createUser("Idempotency Tester");
+  await credits.awardReviewCredits(dbModule.db, userId, `testimonial-${userId}`);
+  await credits.chargeForRequest(dbModule.db, userId, `request-${userId}`);
 
-  assert.throws(() => chargeForRequest(db, userId, `request-${userId}`));
-  assert.equal(balanceOf(userId), CREDITS_PER_REVIEW - 1);
+  await assert.rejects(
+    credits.chargeForRequest(dbModule.db, userId, `request-${userId}`),
+  );
+  assert.equal(await credits.balanceOf(userId), credits.CREDITS_PER_REVIEW - 1);
 });
 
 test("testimonial text is trimmed and bounded", () => {
@@ -106,12 +137,20 @@ test("rating must be clamped between 1 and 5", () => {
   assert.equal(clampRating(4.2), 4);
 });
 
-test("restricted user status flag is respected", () => {
-  const userId = createUser("Restricted User");
-  const user = db.select().from(users).where(eq(users.id, userId)).get();
-  assert.equal(user?.isRestricted, false);
+dbTest("restricted user status flag is respected", async () => {
+  if (!dbModule || !schema) throw new Error("TEST_DATABASE_URL is required");
+  const { eq } = await import("drizzle-orm");
+  const userId = await createUser("Restricted User");
+  const rows = await dbModule.db.select().from(schema.users).where(eq(schema.users.id, userId));
+  assert.equal(rows[0]?.isRestricted, false);
 
-  db.update(users).set({ isRestricted: true }).where(eq(users.id, userId)).run();
-  const updated = db.select().from(users).where(eq(users.id, userId)).get();
-  assert.equal(updated?.isRestricted, true);
+  await dbModule.db
+    .update(schema.users)
+    .set({ isRestricted: true })
+    .where(eq(schema.users.id, userId));
+  const updated = await dbModule.db
+    .select()
+    .from(schema.users)
+    .where(eq(schema.users.id, userId));
+  assert.equal(updated[0]?.isRestricted, true);
 });

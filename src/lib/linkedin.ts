@@ -25,7 +25,7 @@ export function authorizationUrl(params: {
   redirectUri: string;
   state: string;
   nonce: string;
-  challenge: string;
+  challenge?: string;
 }): string {
   const url = new URL(AUTHORIZE_URL);
   url.searchParams.set("response_type", "code");
@@ -34,8 +34,12 @@ export function authorizationUrl(params: {
   url.searchParams.set("scope", "openid profile email");
   url.searchParams.set("state", params.state);
   url.searchParams.set("nonce", params.nonce);
-  url.searchParams.set("code_challenge", params.challenge);
-  url.searchParams.set("code_challenge_method", "S256");
+  // PKCE is only documented for LinkedIn's native-pkce endpoint; the standard web
+  // endpoint rejects token exchanges that carry a code_verifier with invalid_client.
+  if (params.challenge) {
+    url.searchParams.set("code_challenge", params.challenge);
+    url.searchParams.set("code_challenge_method", "S256");
+  }
   return url.toString();
 }
 
@@ -75,23 +79,43 @@ export async function exchangeLinkedInCode(params: {
   const clientSecret = cleanEnv(process.env.LINKEDIN_CLIENT_SECRET);
   const redirectUri = cleanEnv(params.redirectUri);
 
+  const body = new URLSearchParams({
+    grant_type: "authorization_code",
+    code: params.code,
+    redirect_uri: redirectUri,
+    client_id: clientId,
+    client_secret: clientSecret,
+  });
+  if (params.verifier) body.set("code_verifier", params.verifier);
+
   const tokenResponse = await fetch(TOKEN_URL, {
     method: "POST",
     headers: { "content-type": "application/x-www-form-urlencoded" },
-    body: new URLSearchParams({
-      grant_type: "authorization_code",
-      code: params.code,
-      redirect_uri: redirectUri,
-      client_id: clientId,
-      client_secret: clientSecret,
-      code_verifier: params.verifier,
-    }),
+    body,
     cache: "no-store",
   });
 
   const tokens = (await tokenResponse.json()) as TokenResponse;
+
   if (!tokenResponse.ok || !tokens.access_token) {
-    throw new Error(tokens.error_description || "LinkedIn token exchange failed.");
+    // Diagnostic only: never logs the secret itself, just its shape and LinkedIn's answer.
+    console.error(
+      "[LinkedIn Token Exchange Error] " +
+        JSON.stringify({
+          status: tokenResponse.status,
+          error: tokens.error,
+          description: tokens.error_description,
+          redirectUri,
+          clientId,
+          clientIdLength: clientId.length,
+          clientSecretLength: clientSecret.length,
+          clientSecretHasQuote: /["']/.test(clientSecret),
+          clientSecretHasWhitespace: /\s/.test(clientSecret),
+          codeLength: params.code.length,
+          verifierLength: params.verifier.length,
+        }),
+    );
+    throw new Error(tokens.error_description || tokens.error || "LinkedIn token exchange failed.");
   }
 
   if (!tokens.id_token) throw new Error("LinkedIn did not return an ID token.");
@@ -106,7 +130,9 @@ export async function exchangeLinkedInCode(params: {
   if (typeof claims.exp !== "number" || claims.exp * 1000 < Date.now()) {
     throw new Error("LinkedIn ID token expired.");
   }
-  if (claims.nonce !== params.expectedNonce) {
+  // LinkedIn's ID token only documents iss/sub/aud/iat/exp; OpenID providers are allowed to
+  // omit nonce, so validate it when present and otherwise rely on state + code exchange.
+  if (claims.nonce !== undefined && claims.nonce !== params.expectedNonce) {
     throw new Error("LinkedIn ID token nonce mismatch.");
   }
 
@@ -125,6 +151,17 @@ export async function exchangeLinkedInCode(params: {
     email?: string;
     locale?: { country?: string; language?: string };
   };
+
+  console.log(
+    "[LinkedIn Profile] " +
+      JSON.stringify({
+        keys: Object.keys(profile),
+        idTokenKeys: Object.keys(claims),
+        hasPicture: typeof profile.picture === "string" && profile.picture.length > 0,
+        pictureHost: typeof profile.picture === "string" ? profile.picture.slice(0, 60) : null,
+        hasEmail: typeof profile.email === "string",
+      }),
+  );
 
   if (!profile.sub) throw new Error("LinkedIn did not return a member identifier.");
   if (typeof claims.sub === "string" && claims.sub !== profile.sub) {

@@ -1,0 +1,153 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Airlinecabz — Airport Taxi &amp; Outstation Cabs (Attest preview)</title>
+    <style>
+      :root {
+        --brand: #2563eb;
+        --ink: #0f172a;
+        --muted: #64748b;
+      }
+      * { box-sizing: border-box; }
+      body {
+        margin: 0;
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+        color: var(--ink);
+        background: #ffffff;
+      }
+      .site-header {
+        position: sticky;
+        top: 0;
+        z-index: 20;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 24px;
+        padding: 14px 32px;
+        background: rgba(255, 255, 255, 0.94);
+        backdrop-filter: blur(10px);
+        border-bottom: 1px solid #e6ebf2;
+      }
+      .logo { display: flex; align-items: center; gap: 10px; font-weight: 700; font-size: 19px; }
+      .logo-mark {
+        display: grid;
+        place-items: center;
+        width: 34px;
+        height: 34px;
+        border-radius: 10px;
+        background: var(--brand);
+        color: #fff;
+        font-size: 15px;
+      }
+      nav { display: flex; gap: 26px; font-size: 14px; font-weight: 500; }
+      nav a { color: var(--ink); text-decoration: none; }
+      nav a:hover { color: var(--brand); }
+      .sign-in {
+        border: 1px solid #d7dee8;
+        border-radius: 10px;
+        padding: 9px 18px;
+        font-size: 14px;
+        font-weight: 600;
+        text-decoration: none;
+        color: var(--ink);
+      }
+      .hero {
+        padding: 64px 32px 28px;
+        text-align: center;
+        background: radial-gradient(120% 140% at 50% 0%, #eef4ff 0%, #ffffff 62%);
+      }
+      .hero h1 { margin: 0 0 12px; font-size: 40px; line-height: 1.15; letter-spacing: -0.02em; }
+      .hero p { margin: 0 auto; max-width: 640px; color: var(--muted); font-size: 16px; line-height: 1.6; }
+      .hero-actions { display: flex; gap: 12px; justify-content: center; align-items: center; margin-top: 28px; flex-wrap: wrap; }
+      .cta {
+        background: var(--brand);
+        color: #fff;
+        border-radius: 12px;
+        padding: 13px 26px;
+        font-weight: 600;
+        font-size: 15px;
+        text-decoration: none;
+      }
+      .reviews { padding: 26px 32px 72px; max-width: 1180px; margin: 0 auto; }
+      .reviews-head { display: flex; align-items: flex-end; justify-content: space-between; gap: 16px; margin-bottom: 26px; flex-wrap: wrap; }
+      .reviews-head h2 { margin: 0; font-size: 26px; letter-spacing: -0.01em; }
+      .reviews-head p { margin: 6px 0 0; color: var(--muted); font-size: 14px; }
+      .reviews-head a { color: var(--brand); font-size: 14px; font-weight: 600; text-decoration: none; }
+      .preview-chip {
+        position: fixed;
+        left: 16px;
+        bottom: 16px;
+        z-index: 50;
+        background: #0f172a;
+        color: #fff;
+        font-size: 11px;
+        letter-spacing: 0.04em;
+        text-transform: uppercase;
+        padding: 7px 11px;
+        border-radius: 999px;
+        opacity: 0.75;
+      }
+      footer { border-top: 1px solid #e6ebf2; padding: 26px 32px; color: var(--muted); font-size: 13px; text-align: center; }
+      @media (max-width: 760px) {
+        nav { display: none; }
+        .hero { padding-top: 44px; }
+        .hero h1 { font-size: 30px; }
+      }
+    </style>
+  </head>
+  <body>
+    <header class="site-header">
+      <div class="logo"><span class="logo-mark">A</span> Airlinecabz</div>
+      <nav>
+        <a href="#">Home</a>
+        <a href="#airport-pricing">Airport Taxi</a>
+        <a href="#airport-pricing">Outstation</a>
+        <a href="#airport-pricing">Local Cab</a>
+        <a href="#airport-pricing">About Us</a>
+      </nav>
+      <a class="sign-in" href="#airport-pricing">Sign In</a>
+    </header>
+
+    <section class="hero">
+      <h1>Reliable airport taxis &amp; outstation cabs</h1>
+      <p>
+        Transparent pricing, verified drivers and on-time pickups across Bangalore.
+        Rated by travellers who book with us every week.
+      </p>
+      <div class="hero-actions">
+        <a class="cta" href="#airport-pricing">Book a cab</a>
+        <!-- Compact social proof badge (same data source as the wall below) -->
+        <script
+          src="/widget.js"
+          data-product="airline-cab"
+          data-layout="badge"
+          data-accent="#2563eb"
+        ></script>
+      </div>
+    </section>
+
+    <section class="reviews" id="airport-pricing">
+      <div class="reviews-head">
+        <div>
+          <h2>What our travellers say</h2>
+          <p>Real reviews from airport pickups, outstation trips and daily city rides.</p>
+        </div>
+        <a href="/wall/airline-cab" target="_blank" rel="noreferrer">View all reviews →</a>
+      </div>
+
+      <!-- Main embed: masonry wall of approved testimonials -->
+      <script
+        src="/widget.js"
+        data-product="airline-cab"
+        data-layout="wall"
+        data-accent="#2563eb"
+        data-limit="9"
+      ></script>
+    </section>
+
+    <footer>© Airlinecabz — demo page for showing the Attest review embed.</footer>
+    <div class="preview-chip">Attest preview</div>
+  </body>
+</html>

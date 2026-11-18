@@ -130,8 +130,10 @@ flowchart LR
   * Unique indexes on `reference_testimonial_id` preventing duplicate credit issuance.
 
 ### 5. Public Wall & Lightweight Embed Widget
-* **Curated Wall (`/wall/[slug]`)**: Displays only approved testimonials in a clean multi-column card layout with verified identity badges.
+* **Curated Wall (`/wall/[slug]`)**: Displays only approved testimonials as floating, borderless cards with an average rating, verified identity badges and a persistent "Leave a testimonial" action.
 * **Zero-Dependency Iframe Embed (`/wall/[slug]?embed=1`)**: Copy-paste responsive embed snippet for Webflow, Framer, WordPress, or custom HTML without loading bulky third-party tracking scripts.
+* **Widget Options**: `/dashboard/wall` offers a live-preview builder — layout (`wall` masonry, `grid`, `carousel`, `badge`, `float`), theme (`light` / `dark`), accent colour (`accent=%23rrggbb`) and item count (`limit=N`).
+* **Script Widget (`/widget.js`)**: `data-product` (slug, required), `data-layout`, `data-theme`, `data-accent`, `data-limit`, `data-container`. The `float` layout renders a fixed bottom-right social-proof bubble that expands into a card panel, independent of any iframe.
 * **Security Middleware**: Custom proxy headers enforce `frame-ancestors *` exclusively on `/wall/*` while locking all other app and dashboard routes to `frame-ancestors 'self'`.
 
 ---
@@ -203,16 +205,38 @@ Default `.env.local` settings:
 NEXT_PUBLIC_APP_URL=http://localhost:3000
 ALLOW_DEMO_AUTH=true
 
+# Postgres (Neon pooled connection string)
+DATABASE_URL=postgres://user:password@host/db?sslmode=require
+
 # Optional: Add when ready to test real LinkedIn OAuth
 LINKEDIN_CLIENT_ID=
 LINKEDIN_CLIENT_SECRET=
+```
+
+Apply the Drizzle migrations once the connection string is set:
+```bash
+npm run db:migrate
 ```
 
 ### 3. Run Development Server
 ```bash
 npm run dev
 ```
-Open [http://localhost:3000](http://localhost:3000) in your browser. The SQLite database is created automatically at `.data/app.db` on first request with all Drizzle migrations applied.
+Open [http://localhost:3000](http://localhost:3000) in your browser.
+
+#### Demo mode (no database required)
+For demos, laptop demos and offline work there is a bundled, seeded database
+(PGlite — real Postgres semantics, in-memory):
+```bash
+npm run dev:demo
+```
+This sets `ATTEST_DEMO_DB=1`, serves demo products, walls, an inbox with one
+pending review and a 9-credit ledger, then reseeds on every restart. Sign in
+with the demo form as `demo@attest.app` to reach the owner dashboard.
+
+Demo mode is explicit and never replaces Postgres: it is used only when
+`ATTEST_DEMO_DB=1` is set or `DATABASE_URL` is missing. If Neon is unreachable,
+the real connection error is surfaced as before.
 
 ### 4. Production Build
 ```bash
@@ -243,8 +267,8 @@ npm test
 
 ## Roadmap & Migration to Cloud
 
-- [ ] **Advanced Wall of Love Styles**: Masonry grid (`columns-3`), star ratings (1–5), and dark/light theme embed parameters (`?theme=dark`).
-- [ ] **Carousel & Badge Widgets**: Horizontal slider and floating badge widgets (Senja / Endorsal parity).
+- [x] **Advanced Wall of Love Styles**: Floating masonry wall (`columns-3`), star ratings (1–5), average rating summary, dark/light theme and accent colour parameters (`?theme=dark&accent=%23rrggbb`).
+- [x] **Carousel, Badge & Floating Widgets**: Horizontal slider, compact rating badge, and a fixed bottom-right floating bubble widget rendered by `/widget.js`.
 - [ ] **Supabase PostgreSQL Driver**: Switch from SQLite to Supabase Postgres with Row Level Security (RLS) for multi-tenant cloud hosting.
 - [ ] **Supabase Storage**: Migrate logo storage from local disk (`.data/uploads/logos`) to an S3-compatible Supabase bucket.
 - [ ] **Transactional Email Notifications**: Integrate [Resend](https://resend.com) to notify founders when new testimonials are submitted.

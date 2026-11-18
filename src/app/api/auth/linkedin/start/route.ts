@@ -17,12 +17,11 @@ export async function GET(request: NextRequest) {
 
   const state = crypto.randomBytes(24).toString("base64url");
   const nonce = crypto.randomBytes(24).toString("base64url");
-  const pkce = createPkce();
   const next = safeNextPath(request.nextUrl.searchParams.get("next"));
   const base = await baseUrl();
 
   const payload = Buffer.from(
-    JSON.stringify({ state, nonce, verifier: pkce.verifier, next, exp: Date.now() + 600_000 }),
+    JSON.stringify({ state, nonce, verifier: "", next, exp: Date.now() + 600_000 }),
   ).toString("base64url");
 
   const response = NextResponse.redirect(
@@ -31,8 +30,16 @@ export async function GET(request: NextRequest) {
       redirectUri: redirectUriFor(base),
       state,
       nonce,
-      challenge: pkce.challenge,
     }),
+  );
+
+  console.log(
+    "[LinkedIn Authorize] " +
+      JSON.stringify({
+        clientId: cleanEnv(process.env.LINKEDIN_CLIENT_ID),
+        clientIdLength: cleanEnv(process.env.LINKEDIN_CLIENT_ID).length,
+        redirectUri: redirectUriFor(base),
+      }),
   );
 
   response.cookies.set("linkedin_oauth", `${payload}.${sign(payload)}`, {

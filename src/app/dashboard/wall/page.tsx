@@ -7,13 +7,13 @@ import { WallCustomizer } from "@/components/wall-customizer";
 import { requireUser } from "@/lib/auth";
 import { parseSnapshot } from "@/lib/identity";
 import { getOwnedProduct, listWall } from "@/lib/queries";
-import { baseUrl, embedSnippet, paths } from "@/lib/urls";
+import { baseUrl, paths } from "@/lib/urls";
 
 export const dynamic = "force-dynamic";
 
 export default async function DashboardWallPage() {
   const user = await requireUser("/dashboard/wall");
-  const product = getOwnedProduct(user.id);
+  const product = await getOwnedProduct(user.id);
 
   if (!product) {
     return (
@@ -30,10 +30,9 @@ export default async function DashboardWallPage() {
     );
   }
 
-  const approved = listWall(product.id);
+  const approved = await listWall(product.id);
   const base = await baseUrl();
   const wallUrl = `${base}${paths.wall(product.slug)}`;
-  const embedUrl = `${base}${paths.embed(product.slug)}`;
 
   return (
     <div className="grid gap-6 lg:grid-cols-[0.75fr_1.25fr] lg:items-start">
@@ -46,6 +45,14 @@ export default async function DashboardWallPage() {
           <div className="mt-4">
             <WallCustomizer slug={product.slug} name={product.name} baseUrl={base} />
           </div>
+          <a
+            href={wallUrl}
+            target="_blank"
+            rel="noreferrer"
+            className="mt-4 inline-flex items-center gap-1.5 rounded-lg border border-zinc-200 px-3 py-1.5 text-xs font-medium text-zinc-600 transition hover:border-zinc-300 hover:text-zinc-900"
+          >
+            Open public wall ↗
+          </a>
         </section>
 
         <section className="rounded-2xl border border-zinc-200 bg-zinc-50/70 p-5 text-xs leading-relaxed text-zinc-500">

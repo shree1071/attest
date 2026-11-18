@@ -59,14 +59,20 @@ export async function GET(request: NextRequest) {
     });
 
     const observedAt = new Date();
-    let user = db
+    const linkedRows = await db
       .select()
       .from(users)
       .where(and(eq(users.provider, "linkedin"), eq(users.providerSubject, identity.subject)))
-      .get();
+      .limit(1);
+    let user = linkedRows[0];
 
     if (!user && identity.email) {
-      const byEmail = db.select().from(users).where(eq(users.email, identity.email)).get();
+      const byEmailRows = await db
+        .select()
+        .from(users)
+        .where(eq(users.email, identity.email))
+        .limit(1);
+      const byEmail = byEmailRows[0];
       if (byEmail) {
         if (byEmail.providerSubject && byEmail.providerSubject !== identity.subject) {
           throw new Error("This email is already linked to a different LinkedIn account.");
@@ -76,7 +82,8 @@ export async function GET(request: NextRequest) {
     }
 
     if (user) {
-      db.update(users)
+      await db
+        .update(users)
         .set({
           name: identity.name,
           email: identity.email ?? user.email,
@@ -86,23 +93,21 @@ export async function GET(request: NextRequest) {
           avatarUrl: identity.picture,
           identityObservedAt: observedAt,
         })
-        .where(eq(users.id, user.id))
-        .run();
+        .where(eq(users.id, user.id));
     } else {
       const id = crypto.randomUUID();
-      db.insert(users)
-        .values({
-          id,
-          email: identity.email,
-          name: identity.name,
-          identitySource: "linkedin",
-          provider: "linkedin",
-          providerSubject: identity.subject,
-          avatarUrl: identity.picture,
-          identityObservedAt: observedAt,
-        })
-        .run();
-      user = db.select().from(users).where(eq(users.id, id)).get()!;
+      await db.insert(users).values({
+        id,
+        email: identity.email,
+        name: identity.name,
+        identitySource: "linkedin",
+        provider: "linkedin",
+        providerSubject: identity.subject,
+        avatarUrl: identity.picture,
+        identityObservedAt: observedAt,
+      });
+      const createdRows = await db.select().from(users).where(eq(users.id, id)).limit(1);
+      user = createdRows[0]!;
     }
 
     await createSession(user.id);

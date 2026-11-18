@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { sqlite } from "@/lib/db";
+import { pool } from "@/lib/db";
 
 export const dynamic = "force-dynamic";
 
@@ -7,7 +7,7 @@ export async function GET() {
   const start = Date.now();
   try {
     // Quick probe to ensure the database connection is alive
-    sqlite.prepare("SELECT 1").get();
+    await pool.query("SELECT 1");
     const latency = Date.now() - start;
 
     return NextResponse.json(

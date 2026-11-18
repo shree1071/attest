@@ -22,10 +22,10 @@ export default async function CreditsPage({
 }) {
   const user = await requireUser("/dashboard/credits");
   const params = await searchParams;
-  const balance = balanceOf(user.id);
-  const product = getOwnedProduct(user.id);
-  const requests = product ? openRequests(product.id) : 0;
-  const ledger = ledgerFor(user.id);
+  const balance = await balanceOf(user.id);
+  const product = await getOwnedProduct(user.id);
+  const requests = product ? await openRequests(product.id) : 0;
+  const ledger = await ledgerFor(user.id);
   const canRequest = Boolean(product?.isPublic && product?.acceptingTestimonials);
 
   return (

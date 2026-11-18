@@ -1,61 +1,54 @@
 import { eq, sql } from "drizzle-orm";
-import { db, type Db } from "./db";
+import { db, type DbExecutor } from "./db";
 import { creditTransactions } from "./schema";
 
 export const CREDITS_PER_REVIEW = 5;
 export const CREDITS_PER_REQUEST = 1;
 
-export function balanceOf(userId: string, executor: Db = db): number {
-  const row = executor
+export async function balanceOf(userId: string, executor: DbExecutor = db): Promise<number> {
+  const rows = await executor
     .select({
       total: sql<number>`coalesce(sum(${creditTransactions.amount}), 0)`,
     })
     .from(creditTransactions)
-    .where(eq(creditTransactions.userId, userId))
-    .get();
+    .where(eq(creditTransactions.userId, userId));
 
-  return Number(row?.total ?? 0);
+  return Number(rows[0]?.total ?? 0);
 }
 
-export function awardReviewCredits(
-  executor: Db,
+export async function awardReviewCredits(
+  executor: DbExecutor,
   userId: string,
   testimonialId: string,
-): number {
-  const balance = balanceOf(userId, executor);
-  executor
-    .insert(creditTransactions)
-    .values({
-      userId,
-      amount: CREDITS_PER_REVIEW,
-      transactionType: "earned",
-      referenceTestimonialId: testimonialId,
-      description: "Community testimonial submitted",
-      balanceAfter: balance + CREDITS_PER_REVIEW,
-    })
-    .run();
+): Promise<number> {
+  const balance = await balanceOf(userId, executor);
+  await executor.insert(creditTransactions).values({
+    userId,
+    amount: CREDITS_PER_REVIEW,
+    transactionType: "earned",
+    referenceTestimonialId: testimonialId,
+    description: "Community testimonial submitted",
+    balanceAfter: balance + CREDITS_PER_REVIEW,
+  });
   return balance + CREDITS_PER_REVIEW;
 }
 
-export function chargeForRequest(
-  executor: Db,
+export async function chargeForRequest(
+  executor: DbExecutor,
   userId: string,
   requestId: string,
-): number {
-  const balance = balanceOf(userId, executor);
+): Promise<number> {
+  const balance = await balanceOf(userId, executor);
   if (balance < CREDITS_PER_REQUEST) {
     throw new Error("You need at least 1 credit to request a testimonial.");
   }
-  executor
-    .insert(creditTransactions)
-    .values({
-      userId,
-      amount: -CREDITS_PER_REQUEST,
-      transactionType: "spent",
-      referenceRequestId: requestId,
-      description: "Requested a marketplace testimonial",
-      balanceAfter: balance - CREDITS_PER_REQUEST,
-    })
-    .run();
+  await executor.insert(creditTransactions).values({
+    userId,
+    amount: -CREDITS_PER_REQUEST,
+    transactionType: "spent",
+    referenceRequestId: requestId,
+    description: "Requested a marketplace testimonial",
+    balanceAfter: balance - CREDITS_PER_REQUEST,
+  });
   return balance - CREDITS_PER_REQUEST;
 }

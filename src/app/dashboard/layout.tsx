@@ -7,8 +7,8 @@ export const dynamic = "force-dynamic";
 
 export default async function DashboardLayout({ children }: { children: React.ReactNode }) {
   const user = await requireUser("/dashboard");
-  const product = getOwnedProduct(user.id);
-  const pending = product ? countByStatus(product.id).pending : 0;
+  const product = await getOwnedProduct(user.id);
+  const pending = product ? (await countByStatus(product.id)).pending : 0;
 
   return (
     <div className="flex min-h-screen flex-col">

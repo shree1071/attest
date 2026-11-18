@@ -27,3 +27,104 @@ textarea {
 @utility text-balance {
   text-wrap: balance;
 }
+
+/* ---------------------------------------------------------------
+   Wall animations
+   Applied via data-anim="fade|up|zoom|slide|flip" with --i as the
+   stagger index. Nothing animates when the visitor prefers reduced
+   motion.
+   --------------------------------------------------------------- */
+@keyframes attest-fade {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes attest-up {
+  from {
+    opacity: 0;
+    transform: translateY(16px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@keyframes attest-zoom {
+  from {
+    opacity: 0;
+    transform: scale(0.94);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@keyframes attest-slide {
+  from {
+    opacity: 0;
+    transform: translateX(-20px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@keyframes attest-flip {
+  from {
+    opacity: 0;
+    transform: perspective(700px) rotateX(-14deg) translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+[data-anim] {
+  animation-duration: 620ms;
+  animation-timing-function: cubic-bezier(0.22, 1, 0.36, 1);
+  animation-fill-mode: both;
+  animation-delay: calc(var(--i, 0) * 70ms);
+}
+
+[data-anim="fade"] {
+  animation-name: attest-fade;
+}
+
+[data-anim="up"] {
+  animation-name: attest-up;
+}
+
+[data-anim="zoom"] {
+  animation-name: attest-zoom;
+}
+
+[data-anim="slide"] {
+  animation-name: attest-slide;
+}
+
+[data-anim="flip"] {
+  animation-name: attest-flip;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  [data-anim] {
+    animation: none !important;
+  }
+}
+
+/* Printing and headless screenshots must never capture a mid/never-run animation. */
+@media print {
+  [data-anim] {
+    animation: none !important;
+    opacity: 1 !important;
+    transform: none !important;
+  }
+}

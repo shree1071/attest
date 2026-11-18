@@ -16,7 +16,7 @@ export default async function ExplorePage({
   const query = (params.q ?? "").trim().slice(0, 80);
   const category = (params.category ?? "").trim() || null;
   const user = await getCurrentUser();
-  const items = exploreProducts(user?.id ?? null, query, category);
+  const items = await exploreProducts(user?.id ?? null, query, category);
 
   return (
     <div className="flex min-h-screen flex-col">

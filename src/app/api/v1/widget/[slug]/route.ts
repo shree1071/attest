@@ -10,13 +10,13 @@ export async function GET(
   { params }: { params: Promise<{ slug: string }> },
 ) {
   const { slug } = await params;
-  const product = getProductBySlug(slug);
+  const product = await getProductBySlug(slug);
 
   if (!product || !product.isPublic) {
     return NextResponse.json({ error: "Product not found or private" }, { status: 404 });
   }
 
-  const testimonials = listWall(product.id).map((t) => {
+  const testimonials = (await listWall(product.id)).map((t) => {
     const snapshot = parseSnapshot(t.identitySnapshot);
     return {
       id: t.id,

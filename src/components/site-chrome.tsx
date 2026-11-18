@@ -4,10 +4,11 @@ import { getCurrentUser } from "@/lib/auth";
 import { balanceOf } from "@/lib/credits";
 import { Avatar } from "./avatar";
 import { Wordmark } from "./brand";
+import { SignInLink } from "./sign-in-link";
 
 export async function SiteHeader() {
   const user = await getCurrentUser();
-  const balance = user ? balanceOf(user.id) : 0;
+  const balance = user ? await balanceOf(user.id) : 0;
 
   return (
     <header className="sticky top-0 z-30 border-b border-zinc-200/80 bg-white/85 backdrop-blur">
@@ -61,12 +62,7 @@ export async function SiteHeader() {
             </>
           ) : (
             <>
-              <Link
-                href="/login"
-                className="rounded-lg px-3 py-1.5 text-zinc-600 transition hover:bg-zinc-100 hover:text-zinc-900"
-              >
-                Sign in
-              </Link>
+              <SignInLink className="rounded-lg px-3 py-1.5 text-zinc-600 transition hover:bg-zinc-100 hover:text-zinc-900" />
               <Link
                 href="/login"
                 className="rounded-lg bg-zinc-900 px-3.5 py-1.5 font-medium text-white transition hover:bg-zinc-800"

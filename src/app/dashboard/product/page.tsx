@@ -15,7 +15,7 @@ export default async function ProductSettingsPage({
 }) {
   const user = await requireUser("/dashboard/product");
   const params = await searchParams;
-  const product = getOwnedProduct(user.id);
+  const product = await getOwnedProduct(user.id);
   const base = await baseUrl();
 
   return (

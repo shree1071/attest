@@ -6,7 +6,7 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { requireUser } from "@/lib/auth";
 import { awardReviewCredits } from "@/lib/credits";
-import { db, type Db } from "@/lib/db";
+import { db } from "@/lib/db";
 import { ValidationError } from "@/lib/errors";
 import { buildIdentitySnapshot } from "@/lib/identity";
 import { notifyOwnerNewSubmission, notifyReviewerApproved } from "@/lib/email";
@@ -19,6 +19,17 @@ import {
 } from "@/lib/schema";
 import { checkbox, text } from "@/lib/validate";
 import type { FormState } from "@/lib/action-state";
+
+function isUniqueViolation(error: unknown): boolean {
+  const pgError = error as { code?: string; constraint?: string };
+  return (
+    pgError?.code === "23505" &&
+    (pgError.constraint === "testimonials_product_author_uq" ||
+      pgError.constraint === "credit_tx_testimonial_uq" ||
+      pgError.constraint === "credit_tx_request_uq" ||
+      pgError.constraint === "requests_fulfilled_uq")
+  );
+}
 
 async function submitTestimonial(
   formData: FormData,
@@ -48,13 +59,22 @@ async function submitTestimonial(
 
     const snapshot = buildIdentitySnapshot(user);
 
-    db.transaction((tx) => {
-      const dbUser = tx.select().from(users).where(eq(users.id, user.id)).get();
-      if (dbUser?.isRestricted) {
+    await db.transaction(async (tx) => {
+      const dbUserRows = await tx
+        .select()
+        .from(users)
+        .where(eq(users.id, user.id))
+        .limit(1);
+      if (dbUserRows[0]?.isRestricted) {
         throw new ValidationError("Your account is restricted from submitting testimonials.");
       }
 
-      const product = tx.select().from(products).where(eq(products.slug, slug)).get();
+      const productRows = await tx
+        .select()
+        .from(products)
+        .where(eq(products.slug, slug))
+        .limit(1);
+      const product = productRows[0];
       if (!product || !product.isPublic) {
         throw new ValidationError("This product page is not available.");
       }
@@ -65,35 +85,33 @@ async function submitTestimonial(
         throw new ValidationError("You cannot submit a testimonial for your own product.");
       }
 
-      const existing = tx
+      const existingRows = await tx
         .select({ id: testimonials.id })
         .from(testimonials)
         .where(and(eq(testimonials.productId, product.id), eq(testimonials.authorId, user.id)))
-        .get();
-      if (existing) {
+        .limit(1);
+      if (existingRows[0]) {
         throw new ValidationError("You have already submitted a testimonial for this product.");
       }
 
       const testimonialId = crypto.randomUUID();
-      tx.insert(testimonials)
-        .values({
-          id: testimonialId,
-          productId: product.id,
-          authorId: user.id,
-          content,
-          rating,
-          sourceType,
-          status: "pending",
-          identitySnapshot: JSON.stringify(snapshot),
-          consentAt: new Date(),
-          submittedAt: new Date(),
-        })
-        .run();
+      await tx.insert(testimonials).values({
+        id: testimonialId,
+        productId: product.id,
+        authorId: user.id,
+        content,
+        rating,
+        sourceType,
+        status: "pending",
+        identitySnapshot: JSON.stringify(snapshot),
+        consentAt: new Date(),
+        submittedAt: new Date(),
+      });
 
       if (sourceType === "exchange") {
-        awardReviewCredits(tx as unknown as Db, user.id, testimonialId);
+        await awardReviewCredits(tx, user.id, testimonialId);
 
-        const openRequest = tx
+        const openRequestRows = await tx
           .select({ id: testimonialRequests.id })
           .from(testimonialRequests)
           .where(
@@ -103,18 +121,19 @@ async function submitTestimonial(
             ),
           )
           .orderBy(asc(testimonialRequests.createdAt))
-          .get();
+          .limit(1);
+        const openRequest = openRequestRows[0];
         if (openRequest) {
-          tx.update(testimonialRequests)
+          await tx
+            .update(testimonialRequests)
             .set({ status: "fulfilled", fulfilledTestimonialId: testimonialId })
-            .where(eq(testimonialRequests.id, openRequest.id))
-            .run();
+            .where(eq(testimonialRequests.id, openRequest.id));
         }
       }
-    }, { behavior: "immediate" });
+    });
   } catch (error) {
     if (error instanceof ValidationError) return { error: error.message };
-    if (error instanceof Error && error.message.includes("UNIQUE constraint")) {
+    if (isUniqueViolation(error)) {
       return { error: "You have already submitted a testimonial for this product." };
     }
     throw error;
@@ -142,14 +161,14 @@ export async function submitExchangeTestimonial(
 }
 
 async function ownedTestimonial(userId: string, testimonialId: string) {
-  const row = db
+  const rows = await db
     .select({ product: products, testimonial: testimonials })
     .from(testimonials)
     .innerJoin(products, eq(products.id, testimonials.productId))
     .where(and(eq(testimonials.id, testimonialId), eq(products.ownerId, userId)))
-    .get();
-  if (!row) throw new Error("Testimonial not found.");
-  return row;
+    .limit(1);
+  if (!rows[0]) throw new Error("Testimonial not found.");
+  return rows[0];
 }
 
 export async function moderateTestimonial(formData: FormData): Promise<void> {
@@ -162,25 +181,24 @@ export async function moderateTestimonial(formData: FormData): Promise<void> {
   if (decision === "approve") {
     // A withdrawn testimonial stays withdrawn even if an owner replays an old form.
     if (testimonial.status === "withdrawn") redirect(`/dashboard/inbox?tab=${tab}`);
-    const max = db
+    const maxRows = await db
       .select({ value: sql<number>`coalesce(max(${testimonials.displayOrder}), -1)` })
       .from(testimonials)
-      .where(and(eq(testimonials.productId, product.id), eq(testimonials.status, "approved")))
-      .get();
-    db.update(testimonials)
+      .where(and(eq(testimonials.productId, product.id), eq(testimonials.status, "approved")));
+    await db
+      .update(testimonials)
       .set({
         status: "approved",
         approvedAt: new Date(),
         rejectedAt: null,
-        displayOrder: Number(max?.value ?? -1) + 1,
+        displayOrder: Number(maxRows[0]?.value ?? -1) + 1,
       })
-      .where(eq(testimonials.id, id))
-      .run();
+      .where(eq(testimonials.id, id));
   } else if (decision === "reject") {
-    db.update(testimonials)
+    await db
+      .update(testimonials)
       .set({ status: "rejected", rejectedAt: new Date(), approvedAt: null })
-      .where(eq(testimonials.id, id))
-      .run();
+      .where(eq(testimonials.id, id));
   } else {
     throw new Error("Unknown moderation decision.");
   }
@@ -195,16 +213,18 @@ export async function withdrawTestimonial(formData: FormData): Promise<void> {
   const user = await requireUser("/dashboard");
   const id = String(formData.get("id") ?? "");
 
-  const row = db
+  const rows = await db
     .select({ testimonial: testimonials, product: products })
     .from(testimonials)
     .innerJoin(products, eq(products.id, testimonials.productId))
     .where(and(eq(testimonials.id, id), eq(testimonials.authorId, user.id)))
-    .get();
+    .limit(1);
+  const row = rows[0];
   if (!row) throw new Error("Testimonial not found.");
 
   if (row.testimonial.status !== "withdrawn") {
-    db.update(testimonials)
+    await db
+      .update(testimonials)
       .set({
         status: "withdrawn",
         withdrawnAt: new Date(),
@@ -212,8 +232,7 @@ export async function withdrawTestimonial(formData: FormData): Promise<void> {
         rejectedAt: null,
         displayOrder: 0,
       })
-      .where(eq(testimonials.id, id))
-      .run();
+      .where(eq(testimonials.id, id));
   }
 
   revalidatePath("/dashboard");
@@ -225,18 +244,18 @@ export async function withdrawTestimonial(formData: FormData): Promise<void> {
   redirect(`/product/${row.product.slug}?withdrawn=1`);
 }
 
-export async function reorderTestimonial(formData: FormData): Promise<void> {  const user = await requireUser("/dashboard/wall");
+export async function reorderTestimonial(formData: FormData): Promise<void> {
+  const user = await requireUser("/dashboard/wall");
   const id = String(formData.get("id") ?? "");
   const direction = String(formData.get("direction") ?? "");
   const { product } = await ownedTestimonial(user.id, id);
 
-  db.transaction((tx) => {
-    const items = tx
+  await db.transaction(async (tx) => {
+    const items = await tx
       .select({ id: testimonials.id, displayOrder: testimonials.displayOrder })
       .from(testimonials)
       .where(and(eq(testimonials.productId, product.id), eq(testimonials.status, "approved")))
-      .orderBy(asc(testimonials.displayOrder), asc(testimonials.submittedAt))
-      .all();
+      .orderBy(asc(testimonials.displayOrder), asc(testimonials.submittedAt));
 
     const index = items.findIndex((item) => item.id === id);
     const swapWith = direction === "up" ? index - 1 : index + 1;
@@ -244,13 +263,14 @@ export async function reorderTestimonial(formData: FormData): Promise<void> {  c
 
     const reordered = [...items];
     [reordered[index], reordered[swapWith]] = [reordered[swapWith], reordered[index]];
-    reordered.forEach((item, position) => {
-      tx.update(testimonials)
+    for (let position = 0; position < reordered.length; position += 1) {
+      const item = reordered[position];
+      await tx
+        .update(testimonials)
         .set({ displayOrder: position })
-        .where(eq(testimonials.id, item.id))
-        .run();
-    });
-  }, { behavior: "immediate" });
+        .where(eq(testimonials.id, item.id));
+    }
+  });
 
   revalidatePath("/dashboard/wall");
   revalidatePath(`/wall/${product.slug}`);

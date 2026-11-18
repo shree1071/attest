@@ -13,6 +13,11 @@ import { saveLogo } from "@/lib/uploads";
 import { checkbox, httpUrl, optionalText, slugify, text } from "@/lib/validate";
 import type { FormState } from "@/lib/action-state";
 
+function isUniqueViolation(error: unknown, constraint: string): boolean {
+  const pgError = error as { code?: string; constraint?: string };
+  return pgError?.code === "23505" && pgError.constraint === constraint;
+}
+
 export async function saveProduct(
   _prev: FormState,
   formData: FormData,
@@ -35,13 +40,15 @@ export async function saveProduct(
       throw new ValidationError("Choose a longer product name or enter a custom slug.");
     }
 
-    const existing = db
+    const existingRows = await db
       .select()
       .from(products)
       .where(eq(products.ownerId, user.id))
-      .get();
+      .limit(1);
+    const existing = existingRows[0];
 
-    const clash = db.select().from(products).where(eq(products.slug, slug)).get();
+    const clashRows = await db.select().from(products).where(eq(products.slug, slug)).limit(1);
+    const clash = clashRows[0];
     if (clash && clash.id !== existing?.id) {
       throw new ValidationError("That public URL is already taken. Pick another slug.");
     }
@@ -65,19 +72,17 @@ export async function saveProduct(
     };
 
     if (existing) {
-      db.update(products).set(values).where(eq(products.id, existing.id)).run();
+      await db.update(products).set(values).where(eq(products.id, existing.id));
     } else {
-      db.insert(products)
-        .values({ id: crypto.randomUUID(), ownerId: user.id, ...values })
-        .run();
+      await db.insert(products).values({ id: crypto.randomUUID(), ownerId: user.id, ...values });
     }
     publishedSlug = slug;
   } catch (error) {
     if (error instanceof ValidationError) return { error: error.message };
-    if (error instanceof Error && error.message.includes("UNIQUE constraint failed: products.slug")) {
+    if (isUniqueViolation(error, "products_slug_uq")) {
       return { error: "That public URL was just taken. Pick another slug." };
     }
-    if (error instanceof Error && error.message.includes("UNIQUE constraint failed: products.owner_id")) {
+    if (isUniqueViolation(error, "products_owner_uq")) {
       return { error: "You already have a product. Refresh the page and try again." };
     }
     throw error;

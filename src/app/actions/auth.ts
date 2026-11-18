@@ -24,33 +24,32 @@ export async function demoSignIn(
     const name = text(formData.get("name"), { label: "Your name", min: 2, max: 80 });
     const headline = optionalText(formData.get("headline"), 120);
 
-    const existing = db.select().from(users).where(eq(users.email, address)).get();
+    const existingRows = await db.select().from(users).where(eq(users.email, address)).limit(1);
+    const existing = existingRows[0];
     if (existing && existing.identitySource !== "demo") {
       return { error: "This address belongs to a LinkedIn account. Sign in with LinkedIn instead." };
     }
     if (existing) {
       userId = existing.id;
-      db.update(users)
+      await db
+        .update(users)
         .set({
           identityObservedAt: new Date(),
           name,
           ...(headline ? { headline, headlineSource: "self_reported" as const } : {}),
         })
-        .where(eq(users.id, existing.id))
-        .run();
+        .where(eq(users.id, existing.id));
     } else {
       userId = crypto.randomUUID();
-      db.insert(users)
-        .values({
-          id: userId,
-          email: address,
-          name,
-          headline,
-          headlineSource: "self_reported",
-          identitySource: "demo",
-          identityObservedAt: new Date(),
-        })
-        .run();
+      await db.insert(users).values({
+        id: userId,
+        email: address,
+        name,
+        headline,
+        headlineSource: "self_reported",
+        identitySource: "demo",
+        identityObservedAt: new Date(),
+      });
     }
   } catch (error) {
     if (error instanceof ValidationError) return { error: error.message };

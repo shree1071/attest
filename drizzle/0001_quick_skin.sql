@@ -1,1 +1,0 @@
-ALTER TABLE `testimonials` ADD `withdrawn_at` integer;

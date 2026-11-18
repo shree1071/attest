@@ -27,12 +27,12 @@ export default async function CollectPage({
   const { slug } = await params;
   const query = await searchParams;
   const viewer = await getCurrentUser();
-  const product = getProductBySlug(slug);
+  const product = await getProductBySlug(slug);
   if (!product) notFound();
 
-  const owner = ownerName(product.ownerId);
+  const owner = await ownerName(product.ownerId);
   const isOwn = viewer?.id === product.ownerId;
-  const submission = viewer ? submissionFor(product.id, viewer.id) : undefined;
+  const submission = viewer ? await submissionFor(product.id, viewer.id) : undefined;
   const logo = logoUrl(product.logoKey);
   const justSubmitted = query.submitted === "1";
   const base = isOwn ? await baseUrl() : "";
@@ -167,14 +167,15 @@ export default async function CollectPage({
                   {owner} invited you to share a testimonial
                 </h1>
                 <p className="mt-1.5 text-sm leading-relaxed text-zinc-600">
-                  Sign in first so your name and headline can be attached to the review. This
-                  collection is free for the product owner.
+                  Sign in with LinkedIn (or a local identity in development) so your name and
+                  headline can be attached to the review, then you will come straight back here.
+                  This collection is free for the product owner.
                 </p>
                 <Link
                   href={`/login?next=${encodeURIComponent(paths.collect(product.slug))}`}
                   className="mt-5 inline-flex rounded-lg bg-zinc-900 px-4 py-2.5 text-sm font-medium text-white"
                 >
-                  Sign in to continue
+                  Sign in to write your review
                 </Link>
               </div>
             )}

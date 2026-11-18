@@ -1,26 +1,12 @@
 {
   "version": "7",
-  "dialect": "sqlite",
+  "dialect": "postgresql",
   "entries": [
     {
       "idx": 0,
-      "version": "6",
-      "when": 1794574716637,
-      "tag": "0000_dapper_dreadnoughts",
-      "breakpoints": true
-    },
-    {
-      "idx": 1,
-      "version": "6",
-      "when": 1794577615464,
-      "tag": "0001_quick_skin",
-      "breakpoints": true
-    },
-    {
-      "idx": 2,
-      "version": "6",
-      "when": 1794774309055,
-      "tag": "0002_handy_vengeance",
+      "version": "7",
+      "when": 1795010108238,
+      "tag": "0000_large_prima",
       "breakpoints": true
     }
   ]

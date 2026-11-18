@@ -27,7 +27,7 @@ export default async function InboxPage({
   const tab: TabKey = tabs.some((item) => item.key === params.tab)
     ? (params.tab as TabKey)
     : "pending";
-  const product = getOwnedProduct(user.id);
+  const product = await getOwnedProduct(user.id);
 
   if (!product) {
     return (
@@ -46,8 +46,8 @@ export default async function InboxPage({
     );
   }
 
-  const counts = countByStatus(product.id);
-  const items = listByStatus(product.id, tab);
+  const counts = await countByStatus(product.id);
+  const items = await listByStatus(product.id, tab);
 
   return (
     <div className="space-y-5">

@@ -7,10 +7,13 @@ export function Avatar({
   name,
   src,
   size = 36,
+  accent,
 }: {
   name: string;
   src?: string | null;
   size?: number;
+  /** When set, initials render on a gradient of this accent colour. */
+  accent?: string;
 }) {
   const [failed, setFailed] = useState(false);
 
@@ -28,6 +31,24 @@ export function Avatar({
         className="shrink-0 rounded-full bg-zinc-100 object-cover"
         style={{ width: size, height: size }}
       />
+    );
+  }
+
+  if (accent) {
+    return (
+      <span
+        className="grid shrink-0 place-items-center rounded-full font-semibold text-white"
+        style={{
+          width: size,
+          height: size,
+          fontSize: Math.max(11, size * 0.36),
+          backgroundImage: `linear-gradient(140deg, ${accent}, color-mix(in oklab, ${accent} 68%, #000))`,
+          boxShadow: `0 6px 16px -8px ${accent}`,
+        }}
+        aria-hidden
+      >
+        {initials(name).slice(0, 1)}
+      </span>
     );
   }
 

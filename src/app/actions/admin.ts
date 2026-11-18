@@ -15,31 +15,33 @@ export async function adminModerateTestimonial(formData: FormData) {
 
   if (!["approved", "rejected", "withdrawn"].includes(action)) return;
 
-  const current = db.select().from(testimonials).where(eq(testimonials.id, testimonialId)).get();
-  if (!current) return;
+  const currentRows = await db
+    .select()
+    .from(testimonials)
+    .where(eq(testimonials.id, testimonialId))
+    .limit(1);
+  if (!currentRows[0]) return;
 
-  db.transaction((tx) => {
-    tx.update(testimonials)
+  await db.transaction(async (tx) => {
+    await tx
+      .update(testimonials)
       .set({
         status: action as "approved" | "rejected" | "withdrawn",
         ...(action === "approved" ? { approvedAt: new Date() } : {}),
         ...(action === "rejected" ? { rejectedAt: new Date() } : {}),
         ...(action === "withdrawn" ? { withdrawnAt: new Date() } : {}),
       })
-      .where(eq(testimonials.id, testimonialId))
-      .run();
+      .where(eq(testimonials.id, testimonialId));
 
-    tx.insert(auditEvents)
-      .values({
-        id: crypto.randomUUID(),
-        actorId: admin.id,
-        action: `testimonial_${action}`,
-        targetType: "testimonial",
-        targetId: testimonialId,
-        reason,
-        createdAt: new Date(),
-      })
-      .run();
+    await tx.insert(auditEvents).values({
+      id: crypto.randomUUID(),
+      actorId: admin.id,
+      action: `testimonial_${action}`,
+      targetType: "testimonial",
+      targetId: testimonialId,
+      reason,
+      createdAt: new Date(),
+    });
   });
 
   revalidatePath("/admin");
@@ -52,28 +54,24 @@ export async function adminToggleUserRestriction(formData: FormData) {
   const userId = String(formData.get("userId") ?? "");
   const reason = String(formData.get("reason") ?? "Account restriction update");
 
-  const target = db.select().from(users).where(eq(users.id, userId)).get();
+  const targetRows = await db.select().from(users).where(eq(users.id, userId)).limit(1);
+  const target = targetRows[0];
   if (!target) return;
 
   const nextState = !target.isRestricted;
 
-  db.transaction((tx) => {
-    tx.update(users)
-      .set({ isRestricted: nextState })
-      .where(eq(users.id, userId))
-      .run();
+  await db.transaction(async (tx) => {
+    await tx.update(users).set({ isRestricted: nextState }).where(eq(users.id, userId));
 
-    tx.insert(auditEvents)
-      .values({
-        id: crypto.randomUUID(),
-        actorId: admin.id,
-        action: nextState ? "restrict_user" : "unrestrict_user",
-        targetType: "user",
-        targetId: userId,
-        reason,
-        createdAt: new Date(),
-      })
-      .run();
+    await tx.insert(auditEvents).values({
+      id: crypto.randomUUID(),
+      actorId: admin.id,
+      action: nextState ? "restrict_user" : "unrestrict_user",
+      targetType: "user",
+      targetId: userId,
+      reason,
+      createdAt: new Date(),
+    });
   });
 
   revalidatePath("/admin");

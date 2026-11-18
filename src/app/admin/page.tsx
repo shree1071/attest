@@ -13,9 +13,9 @@ export const dynamic = "force-dynamic";
 export default async function AdminPortalPage() {
   const admin = await requireAdmin();
 
-  const allUsers = db.select().from(users).all();
-  const allProducts = db.select().from(products).all();
-  const allTestimonials = db
+  const allUsers = await db.select().from(users);
+  const allProducts = await db.select().from(products);
+  const allTestimonials = await db
     .select({
       testimonial: testimonials,
       product: products,
@@ -24,15 +24,13 @@ export default async function AdminPortalPage() {
     .from(testimonials)
     .innerJoin(products, eq(products.id, testimonials.productId))
     .innerJoin(users, eq(users.id, testimonials.authorId))
-    .orderBy(desc(testimonials.submittedAt))
-    .all();
+    .orderBy(desc(testimonials.submittedAt));
 
-  const recentAudits = db
+  const recentAudits = await db
     .select()
     .from(auditEvents)
     .orderBy(desc(auditEvents.createdAt))
-    .limit(10)
-    .all();
+    .limit(10);
 
   const pendingCount = allTestimonials.filter((t) => t.testimonial.status === "pending").length;
   const approvedCount = allTestimonials.filter((t) => t.testimonial.status === "approved").length;

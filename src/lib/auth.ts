@@ -50,10 +50,8 @@ export async function createSession(userId: string): Promise<void> {
   const expiresAt = new Date(Date.now() + SESSION_TTL_MS);
 
   const now = new Date();
-  db.delete(sessions).where(lt(sessions.expiresAt, now)).run();
-  db.insert(sessions)
-    .values({ id: hashToken(token), userId, expiresAt })
-    .run();
+  await db.delete(sessions).where(lt(sessions.expiresAt, now));
+  await db.insert(sessions).values({ id: hashToken(token), userId, expiresAt });
 
   const store = await cookies();
   store.set(COOKIE_NAME, token, {
@@ -69,7 +67,7 @@ export async function destroySession(): Promise<void> {
   const store = await cookies();
   const token = store.get(COOKIE_NAME)?.value;
   if (token) {
-    db.delete(sessions).where(eq(sessions.id, hashToken(token))).run();
+    await db.delete(sessions).where(eq(sessions.id, hashToken(token)));
   }
   store.delete(COOKIE_NAME);
 }
@@ -78,14 +76,14 @@ export async function getCurrentUser(): Promise<User | null> {
   const token = (await cookies()).get(COOKIE_NAME)?.value;
   if (!token) return null;
 
-  const row = db
+  const rows = await db
     .select({ user: users })
     .from(sessions)
     .innerJoin(users, eq(users.id, sessions.userId))
     .where(and(eq(sessions.id, hashToken(token)), gt(sessions.expiresAt, new Date())))
-    .get();
+    .limit(1);
 
-  return row?.user ?? null;
+  return rows[0]?.user ?? null;
 }
 
 export async function requireUser(nextPath?: string): Promise<User> {
