@@ -7,6 +7,7 @@ const LAYOUTS = [
   { id: "wall", label: "Wall", hint: "Floating masonry cards" },
   { id: "grid", label: "Grid", hint: "Even rows, equal heights" },
   { id: "carousel", label: "Carousel", hint: "Swipeable horizontal row" },
+  { id: "marquee", label: "Scrolling", hint: "Auto-scrolling review rows" },
   { id: "badge", label: "Badge", hint: "Compact rating pill" },
   { id: "float", label: "Floating", hint: "Corner bubble (script only)" },
 ] as const;
@@ -40,6 +41,7 @@ const HEIGHTS: Record<Exclude<LayoutId, "float">, number> = {
   wall: 780,
   grid: 720,
   carousel: 460,
+  marquee: 560,
   badge: 96,
 };
 

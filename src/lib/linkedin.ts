@@ -182,6 +182,14 @@ export async function exchangeLinkedInCode(params: {
   };
 }
 
+/**
+ * The exact URL registered under "Authorized redirect URLs" in the LinkedIn
+ * developer app. Set LINKEDIN_REDIRECT_URI when the app is reachable on several
+ * hosts (custom domain + vercel.app) and LinkedIn should always receive the one
+ * canonical, registered value.
+ */
 export function redirectUriFor(base: string): string {
-  return `${base}/api/auth/linkedin/callback`;
+  const explicit = cleanEnv(process.env.LINKEDIN_REDIRECT_URI);
+  if (explicit) return explicit.replace(/\/$/, "");
+  return `${cleanEnv(base).replace(/\/$/, "")}/api/auth/linkedin/callback`;
 }

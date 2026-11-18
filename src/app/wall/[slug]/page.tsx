@@ -22,7 +22,7 @@ type WallQuery = {
   animation?: string;
 };
 
-const LAYOUTS = ["wall", "grid", "carousel", "badge"] as const;
+const LAYOUTS = ["wall", "grid", "carousel", "marquee", "badge"] as const;
 type Layout = (typeof LAYOUTS)[number];
 
 const ANIMATIONS = ["none", "fade", "up", "zoom", "slide", "flip"] as const;
@@ -273,6 +273,27 @@ export default async function WallPage({
             {card(item)}
           </div>
         ))}
+      </div>
+    ) : layout === "marquee" ? (
+      <div className="attest-marquee-bunch mt-8">
+        {[0, 1].map((row) => {
+          const rowItems = items.filter((_, index) => index % 2 === row);
+          const doubled = rowItems.length ? [...rowItems, ...rowItems] : [];
+          return (
+            <div
+              key={row}
+              className={`attest-marquee-bunch-row ${row === 1 ? "is-reverse" : ""}`}
+            >
+              <div className="attest-marquee-bunch-track">
+                {doubled.map((item, index) => (
+                  <div key={`${item.id}-${index}`} className="attest-marquee-bunch-card">
+                    {card(item)}
+                  </div>
+                ))}
+              </div>
+            </div>
+          );
+        })}
       </div>
     ) : layout === "grid" ? (
       <div className="mt-6 grid gap-5 sm:grid-cols-2 lg:grid-cols-3">

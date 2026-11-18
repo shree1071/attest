@@ -54,7 +54,7 @@ parent element):
 | Attribute | Required | Values | Default | Meaning |
 | --- | --- | --- | --- | --- |
 | `data-product` | **yes** | slug | — | Which product's wall to load |
-| `data-layout` | no | `wall`, `grid`, `carousel`, `badge`, `float` | `wall` | Rendering style |
+| `data-layout` | no | `wall`, `grid`, `carousel`, `marquee`, `badge`, `float` | `wall` | Rendering style |
 | `data-theme` | no | `light`, `dark` | `light` | Colour scheme |
 | `data-accent` | no | `#rrggbb` | `#2563eb` | Brand colour for avatars/buttons |
 | `data-limit` | no | `1`–`50`, or `0` | all | Max cards returned |
@@ -65,7 +65,9 @@ Layout behaviour:
 
 - `wall` — masonry columns (1 / 2 / 3 by breakpoint)
 - `grid` — even rows, equal-height cards
-- `carousel` — horizontally scrollable row
+- `carousel` — horizontally scrollable row (user-driven)
+- `marquee` — two auto-scrolling rows of reviews, opposite directions, seamless loop;
+  pauses on hover and falls back to a static grid for reduced-motion users
 - `badge` — compact "★★★★★ 4.8 (12 reviews)" pill, links to the wall
 - `float` — fixed corner bubble that opens a panel (always mounts to `<body>`;
   `data-container` is ignored)
@@ -118,14 +120,14 @@ document.getElementById("reviews").appendChild(script);
 | Param | Values | Default | Meaning |
 | --- | --- | --- | --- |
 | `embed` | `1` | — | Enables embed mode (no site chrome, `noindex`) |
-| `layout` | `wall`, `grid`, `carousel`, `badge` | `wall` | Rendering style |
+| `layout` | `wall`, `grid`, `carousel`, `marquee`, `badge` | `wall` | Rendering style |
 | `theme` | `light`, `dark` | `light` | Colour scheme |
 | `accent` | `%23rrggbb` (URL-encoded `#rrggbb`) | `#2563eb` | Brand colour |
 | `limit` | integer | all | Max cards |
 | `cta` | `0` | on | Hides the "collect your own reviews" call to action |
 | `animation` | `up`, `fade`, `zoom`, `slide`, `flip`, `none` | `up` | Scroll-in animation preset |
 
-Suggested heights: `wall` 780, `grid` 720, `carousel` 460, `badge` 96. All layouts are
+Suggested heights: `wall` 780, `grid` 720, `carousel` 460, `marquee` 560, `badge` 96. All layouts are
 responsive; iframes cannot auto-resize, so re-check heights on mobile breakpoints.
 
 ---

@@ -7,10 +7,22 @@ export const paths = {
   embed: (slug: string) => `/wall/${slug}?embed=1`,
 };
 
+function cleanUrl(value: string | undefined): string {
+  return value ? value.replace(/^\uFEFF/, "").trim().replace(/\/$/, "") : "";
+}
+
+/**
+ * The canonical public origin.
+ *
+ * A hard-coded app URL wins (NEXT_PUBLIC_APP_URL), then the host the request
+ * actually arrived on. This keeps OAuth redirects working on whichever domain
+ * is opened (vercel.app, custom domain, preview) without an env edit, while
+ * LINKEDIN_REDIRECT_URI can still pin one canonical callback.
+ */
 export async function baseUrl(): Promise<string> {
-  const raw = process.env.NEXT_PUBLIC_APP_URL;
-  const configured = raw ? raw.replace(/^\uFEFF/, "").trim() : "";
-  if (configured) return configured.replace(/\/$/, "");
+  const configured = cleanUrl(process.env.NEXT_PUBLIC_APP_URL);
+  if (configured) return configured;
+
   const h = await headers();
   const host = h.get("x-forwarded-host") ?? h.get("host") ?? "localhost:3000";
   const proto = h.get("x-forwarded-proto") ?? (host.includes("localhost") ? "http" : "https");

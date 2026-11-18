@@ -29,7 +29,8 @@ Pick exactly one integration path and state why in one sentence:
 IMPLEMENT
 - Insert the embed where the reviews should appear; do not restyle the page's other sections.
 - Map the site's brand colour to `data-accent` (or `accent` query param) as `#rrggbb`.
-- Choose `data-layout` from: wall (masonry, default), grid, carousel, badge, float.
+- Choose `data-layout` from: wall (masonry, default), grid, carousel, marquee
+  (auto-scrolling rows), badge, float.
 - Choose `data-animation` from: up (default), fade, zoom, slide, flip, none.
 - Default to `data-theme="light"` unless the section is dark.
 - Set `data-limit` only if the section must cap card count; omit it to show all.

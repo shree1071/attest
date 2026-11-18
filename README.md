@@ -118,6 +118,23 @@ flowchart LR
   * Consent confirmation
 * *Result*: Historical testimonials survive reviewer account changes, suspensions, or profile updates without external runtime API dependencies.
 
+#### LinkedIn app setup (Vercel + custom domain)
+LinkedIn compares `redirect_uri` **byte for byte** against the values registered on the app, so every host the app runs on must be registered:
+
+| Environment | Authorized redirect URL |
+|---|---|
+| Production (Vercel) | `https://attest26.vercel.app/api/auth/linkedin/callback` |
+| Local development | `http://localhost:3000/api/auth/linkedin/callback` |
+| Custom domain | `https://your-domain.com/api/auth/linkedin/callback` |
+
+Steps:
+1. LinkedIn Developer Portal → your app → **Auth** → *Authorized redirect URLs for your app* → add the exact URLs above (no query strings or fragments).
+2. Vercel → Project → Settings → Environment Variables: set `NEXT_PUBLIC_APP_URL=https://attest26.vercel.app` (Production) and keep `LINKEDIN_CLIENT_ID` / `LINKEDIN_CLIENT_SECRET`. Redeploy after changing any env value.
+3. Optional: set `LINKEDIN_REDIRECT_URI` to pin the one canonical callback LinkedIn should always receive, even when the request arrives on a preview or custom host.
+4. The app derives the callback from `NEXT_PUBLIC_APP_URL`, then Vercel's `VERCEL_PROJECT_PRODUCTION_URL`, then the request host — so preview deployments do not invent an unregistered redirect URL.
+
+> Symptom of a mismatch: LinkedIn shows *"Bummer, something went wrong — The redirect_uri does not match the registered value"* and the `redirect_uri` query parameter in the address bar will show the exact value that must be registered.
+
 ### 4. Append-Only Credit Ledger
 * No mutable `balance` integer columns that risk concurrency drift or race conditions.
 * Credit balance is strictly computed as `SUM(credit_transactions.amount)`.
