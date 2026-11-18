@@ -128,3 +128,73 @@ textarea {
     transform: none !important;
   }
 }
+
+/* ---------------------------------------------------------------
+   Marquee wall: continuously scrolling rows of reviews.
+   Each row duplicates its cards and translates exactly -50% for a
+   seamless loop. Hover pauses, reduced motion falls back to a grid.
+   --------------------------------------------------------------- */
+@keyframes attest-marquee {
+  from {
+    transform: translate3d(0, 0, 0);
+  }
+  to {
+    transform: translate3d(-50%, 0, 0);
+  }
+}
+
+.attest-marquee-bunch {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  overflow: hidden;
+  -webkit-mask-image: linear-gradient(90deg, transparent, #000 5%, #000 95%, transparent);
+  mask-image: linear-gradient(90deg, transparent, #000 5%, #000 95%, transparent);
+}
+
+.attest-marquee-bunch-row {
+  display: flex;
+  overflow: hidden;
+}
+
+.attest-marquee-bunch-track {
+  display: flex;
+  gap: 20px;
+  width: max-content;
+  padding-right: 20px;
+  animation: attest-marquee 46s linear infinite;
+  will-change: transform;
+}
+
+.attest-marquee-bunch-row.is-reverse .attest-marquee-bunch-track {
+  animation-direction: reverse;
+}
+
+.attest-marquee-bunch:hover .attest-marquee-bunch-track {
+  animation-play-state: paused;
+}
+
+.attest-marquee-bunch-card {
+  width: 340px;
+  flex: 0 0 340px;
+}
+
+@media (max-width: 640px) {
+  .attest-marquee-bunch-card {
+    width: 280px;
+    flex-basis: 280px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .attest-marquee-bunch {
+    overflow: visible;
+    mask-image: none;
+    -webkit-mask-image: none;
+  }
+  .attest-marquee-bunch-track {
+    animation: none;
+    flex-wrap: wrap;
+    width: auto;
+  }
+}
