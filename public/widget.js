@@ -90,10 +90,10 @@
     return '<div class="attest-avatar">' + escapeHtml(initials(t.author.name)) + "</div>";
   }
 
-  function card(t, index) {
+  function card(t, index, noAnim) {
     var meta = t.author.headline || (t.sourceType === "exchange" ? "Community exchange" : "Verified customer");
     var animAttrs =
-      animation === "none"
+      animation === "none" || noAnim
         ? ""
         : ' data-anim="' + animation + '" style="--i:' + (index || 0) + '"';
     return (
@@ -300,6 +300,21 @@
     ".attest-float-bubble .attest-stars{margin:0;}" +
     ".attest-float-bubble .attest-star-empty{fill:rgba(255,255,255,.45);}" +
     "@media(max-width:480px){.attest-float{right:12px;bottom:12px}}" +
+    // Marquee: continuously scrolling review rows, seamless because every row's
+    // content is duplicated and the track translates exactly -50%.
+    ".attest-marquee{display:flex;flex-direction:column;gap:18px;overflow:hidden;" +
+    "-webkit-mask-image:linear-gradient(90deg,transparent,#000 5%,#000 95%,transparent);" +
+    "mask-image:linear-gradient(90deg,transparent,#000 5%,#000 95%,transparent);}" +
+    ".attest-marquee-row{display:flex;overflow:hidden;}" +
+    ".attest-marquee-track{display:flex;gap:18px;width:max-content;padding-right:18px;" +
+    "animation:attestw-marquee 46s linear infinite;will-change:transform;}" +
+    ".attest-marquee-row.attest-reverse .attest-marquee-track{animation-direction:reverse;}" +
+    ".attest-marquee:hover .attest-marquee-track{animation-play-state:paused;}" +
+    ".attest-marquee .attest-card{width:340px;max-width:340px;flex:0 0 340px;margin:0;}" +
+    "@keyframes attestw-marquee{from{transform:translate3d(0,0,0)}to{transform:translate3d(-50%,0,0)}}" +
+    "@media(max-width:640px){.attest-marquee .attest-card{width:280px;max-width:280px;flex-basis:280px;}}" +
+    "@media (prefers-reduced-motion: reduce){.attest-marquee{overflow:visible;mask-image:none;-webkit-mask-image:none;}" +
+    ".attest-marquee-track{animation:none;flex-wrap:wrap;width:auto;}}" +
     // Scroll-in animations. Cards start hidden, then reveal when they enter the viewport.
     "@keyframes attestw-fade{from{opacity:0}to{opacity:1}}" +
     "@keyframes attestw-up{from{opacity:0;transform:translateY(16px)}to{opacity:1;transform:none}}" +
@@ -390,6 +405,38 @@
         }
         // The panel starts hidden, so intersections are never observed — reveal instantly.
         revealCards(wrapper, true);
+        return;
+      }
+
+      if (layout === "marquee") {
+        var rowA = [];
+        var rowB = [];
+        items.forEach(function (item, index) {
+          (index % 2 === 0 ? rowA : rowB).push(item);
+        });
+        if (!rowB.length) rowB = rowA.slice();
+
+        function marqueeRow(list, reverse) {
+          var doubled = list.concat(list);
+          return (
+            '<div class="attest-marquee-row' +
+            (reverse ? " attest-reverse" : "") +
+            '"><div class="attest-marquee-track">' +
+            doubled
+              .map(function (item) {
+                return card(item, 0, true);
+              })
+              .join("") +
+            "</div></div>"
+          );
+        }
+
+        wrapper.innerHTML =
+          styles +
+          '<div class="attest-marquee">' +
+          marqueeRow(rowA) +
+          marqueeRow(rowB, true) +
+          "</div>";
         return;
       }
 
