@@ -3,6 +3,7 @@ import { NextResponse, type NextRequest } from "next/server";
 import { safeNextPath, sign } from "@/lib/auth";
 import {
   authorizationUrl,
+  cleanEnv,
   createPkce,
   linkedinConfigured,
   redirectUriFor,
@@ -26,7 +27,7 @@ export async function GET(request: NextRequest) {
 
   const response = NextResponse.redirect(
     authorizationUrl({
-      clientId: process.env.LINKEDIN_CLIENT_ID!,
+      clientId: cleanEnv(process.env.LINKEDIN_CLIENT_ID),
       redirectUri: redirectUriFor(base),
       state,
       nonce,

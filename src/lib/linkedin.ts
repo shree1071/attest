@@ -4,8 +4,12 @@ const AUTHORIZE_URL = "https://www.linkedin.com/oauth/v2/authorization";
 const TOKEN_URL = "https://www.linkedin.com/oauth/v2/accessToken";
 const USERINFO_URL = "https://api.linkedin.com/v2/userinfo";
 
+export function cleanEnv(val?: string): string {
+  return (val ?? "").replace(/^\uFEFF/, "").trim();
+}
+
 export function linkedinConfigured(): boolean {
-  return Boolean(process.env.LINKEDIN_CLIENT_ID && process.env.LINKEDIN_CLIENT_SECRET);
+  return Boolean(cleanEnv(process.env.LINKEDIN_CLIENT_ID) && cleanEnv(process.env.LINKEDIN_CLIENT_SECRET));
 }
 
 export type PkcePair = { verifier: string; challenge: string };
@@ -25,8 +29,8 @@ export function authorizationUrl(params: {
 }): string {
   const url = new URL(AUTHORIZE_URL);
   url.searchParams.set("response_type", "code");
-  url.searchParams.set("client_id", params.clientId);
-  url.searchParams.set("redirect_uri", params.redirectUri);
+  url.searchParams.set("client_id", cleanEnv(params.clientId));
+  url.searchParams.set("redirect_uri", cleanEnv(params.redirectUri));
   url.searchParams.set("scope", "openid profile email");
   url.searchParams.set("state", params.state);
   url.searchParams.set("nonce", params.nonce);
@@ -67,8 +71,9 @@ export async function exchangeLinkedInCode(params: {
   verifier: string;
   expectedNonce: string;
 }): Promise<LinkedInIdentity> {
-  const clientId = process.env.LINKEDIN_CLIENT_ID!;
-  const clientSecret = process.env.LINKEDIN_CLIENT_SECRET!;
+  const clientId = cleanEnv(process.env.LINKEDIN_CLIENT_ID);
+  const clientSecret = cleanEnv(process.env.LINKEDIN_CLIENT_SECRET);
+  const redirectUri = cleanEnv(params.redirectUri);
 
   const tokenResponse = await fetch(TOKEN_URL, {
     method: "POST",
@@ -76,7 +81,7 @@ export async function exchangeLinkedInCode(params: {
     body: new URLSearchParams({
       grant_type: "authorization_code",
       code: params.code,
-      redirect_uri: params.redirectUri,
+      redirect_uri: redirectUri,
       client_id: clientId,
       client_secret: clientSecret,
       code_verifier: params.verifier,

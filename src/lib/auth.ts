@@ -11,7 +11,8 @@ const COOKIE_NAME = "attest_session";
 const SESSION_TTL_MS = 1000 * 60 * 60 * 24 * 30;
 
 function appSecret(): Buffer {
-  const configured = process.env.AUTH_SECRET;
+  const raw = process.env.AUTH_SECRET;
+  const configured = raw ? raw.replace(/^\uFEFF/, "").trim() : "";
   if (configured && configured.length >= 32) return Buffer.from(configured);
   const dataDir = process.env.VERCEL
     ? path.join("/tmp", ".data")
